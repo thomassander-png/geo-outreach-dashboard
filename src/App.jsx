@@ -3,16 +3,34 @@ import { PLATFORMS, WEEK_RHYTHM, RULES } from "./data/tasks";
 import "./App.css";
 
 const STORAGE_KEY = "geo-dashboard-v1";
+const PROGRESS_VERSION_KEY = "geo-dashboard-progress-version";
+const CURRENT_PROGRESS_VERSION = "2026-08-18-portal-status";
+
+const INITIAL_DONE = {
+  gf1: true,
+  gf2: true,
+  rd1: true,
+  rd2: true,
+  li1: true,
+};
 
 function loadState() {
   try {
+    if (localStorage.getItem(PROGRESS_VERSION_KEY) !== CURRENT_PROGRESS_VERSION) {
+      localStorage.setItem(PROGRESS_VERSION_KEY, CURRENT_PROGRESS_VERSION);
+      return { ...INITIAL_DONE };
+    }
+
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch { return {}; }
+    return raw ? JSON.parse(raw) : { ...INITIAL_DONE };
+  } catch {
+    return { ...INITIAL_DONE };
+  }
 }
 
 function saveState(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(PROGRESS_VERSION_KEY, CURRENT_PROGRESS_VERSION);
 }
 
 const TIER_STYLES = {

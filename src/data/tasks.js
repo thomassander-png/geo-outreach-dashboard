@@ -29,11 +29,51 @@ export const PLATFORMS = [
     ],
   },
   {
+    id: "xing", name: "Xing", tier: 2, tierLabel: "Tier 2", url: "https://www.xing.com",
+    tasks: [
+      { id: "xing1", text: "Profil erstellen oder für GEO-Themen optimieren", when: "Diese Woche" },
+      { id: "xing2", text: "Ersten Fachbeitrag ohne Link veröffentlichen", when: "Woche 2" },
+      { id: "xing3", text: "Erste geo-tool.com Erwähnung einplanen", when: "Woche 3–4" },
+    ],
+  },
+  {
+    id: "t3n", name: "t3n Community", tier: 2, tierLabel: "Tier 2", url: "https://t3n.de/community",
+    tasks: [
+      { id: "t3n1", text: "Account erstellen und passende Themen verfolgen", when: "Diese Woche" },
+      { id: "t3n2", text: "Erste hilfreiche Diskussion ohne Link beitragen", when: "Woche 2" },
+      { id: "t3n3", text: "Erste geo-tool.com Erwähnung vorbereiten", when: "Woche 3–4" },
+    ],
+  },
+  {
     id: "pr", name: "OpenPR / Pressebox", tier: 3, tierLabel: "Tier 3", url: "https://www.openpr.de",
     tasks: [
       { id: "pr1", text: "Account auf openPR.de anlegen", when: "Diese Woche" },
       { id: "pr2", text: "Erste Pressemitteilung zu geo-tool.com schreiben", when: "Woche 2" },
       { id: "pr3", text: "Auf Pressebox.de veröffentlichen", when: "Woche 2" },
+    ],
+  },
+  {
+    id: "pbox", name: "Pressebox.de", tier: 3, tierLabel: "Tier 3", url: "https://www.pressebox.de",
+    tasks: [
+      { id: "pbox1", text: "Account anlegen und Profil vervollständigen", when: "Diese Woche" },
+      { id: "pbox2", text: "Erste Pressemitteilung veröffentlichen", when: "Woche 2" },
+      { id: "pbox3", text: "Weitere relevante GEO-Themen als Meldungen planen", when: "Woche 3–4" },
+    ],
+  },
+  {
+    id: "fp", name: "Firmenpresse.de", tier: 3, tierLabel: "Tier 3", url: "https://www.firmenpresse.de",
+    tasks: [
+      { id: "fp1", text: "Account anlegen und Unternehmensprofil einrichten", when: "Diese Woche" },
+      { id: "fp2", text: "Erste Pressemitteilung als Variation veröffentlichen", when: "Woche 2" },
+      { id: "fp3", text: "Nächste GEO-relevante Meldung vorbereiten", when: "Woche 3–4" },
+    ],
+  },
+  {
+    id: "lp", name: "lifePR.de", tier: 3, tierLabel: "Tier 3", url: "https://www.lifepr.de",
+    tasks: [
+      { id: "lp1", text: "Account anlegen und Themenbereich festlegen", when: "Diese Woche" },
+      { id: "lp2", text: "Erste Pressemitteilung veröffentlichen", when: "Woche 2" },
+      { id: "lp3", text: "Folgemeldung mit eigenem inhaltlichen Winkel planen", when: "Woche 3–4" },
     ],
   },
   {
@@ -44,10 +84,42 @@ export const PLATFORMS = [
     ],
   },
   {
+    id: "pe", name: "ProvenExpert", tier: 4, tierLabel: "Tier 4", url: "https://www.provenexpert.com",
+    tasks: [
+      { id: "pe1", text: "Unternehmensprofil anlegen und vervollständigen", when: "Diese Woche" },
+      { id: "pe2", text: "Zwei echte Kunden um eine Bewertung bitten", when: "Woche 2" },
+      { id: "pe3", text: "Bewertungen beantworten und Profil aktuell halten", when: "Laufend" },
+    ],
+  },
+  {
+    id: "ku", name: "Kununu", tier: 4, tierLabel: "Tier 4", url: "https://www.kununu.com",
+    tasks: [
+      { id: "ku1", text: "Arbeitgeberprofil prüfen und vervollständigen", when: "Diese Woche" },
+      { id: "ku2", text: "Arbeitgeber-Informationen aktuell halten", when: "Woche 2" },
+      { id: "ku3", text: "Bewertungen professionell beantworten", when: "Laufend" },
+    ],
+  },
+  {
+    id: "omr", name: "OMR Reviews", tier: 4, tierLabel: "Tier 4", url: "https://omr.com/de/reviews",
+    tasks: [
+      { id: "omr1", text: "Produktprofil anlegen oder Claim prüfen", when: "Diese Woche" },
+      { id: "omr2", text: "Produktinformationen und Kategorien vervollständigen", when: "Woche 2" },
+      { id: "omr3", text: "Erste Nutzer um ehrliches Review bitten", when: "Woche 3–4" },
+    ],
+  },
+  {
     id: "wd", name: "Wikidata", tier: 5, tierLabel: "Tier 5", url: "https://www.wikidata.org",
     tasks: [
       { id: "wd1", text: "Noch warten — erst externe Signale aufbauen (Reddit, PR, Gutefrage)", when: "Phase 2" },
       { id: "wd2", text: "Eintrag neu anlegen mit Quellen aus Phase 1", when: "Phase 2" },
+    ],
+  },
+  {
+    id: "ss", name: "Slideshare", tier: 5, tierLabel: "Tier 5", url: "https://www.slideshare.net",
+    tasks: [
+      { id: "ss1", text: "Profil anlegen und Themenformate planen", when: "Phase 2" },
+      { id: "ss2", text: "Erste GEO-Präsentation als eigenständigen Mehrwert erstellen", when: "Phase 2" },
+      { id: "ss3", text: "Präsentation veröffentlichen und Quellen verlinken", when: "Phase 2" },
     ],
   },
 ];

@@ -40,6 +40,8 @@ const TIER_STYLES = {
   4: { bg: "#FAF5FF", color: "#7C3AED" },
   5: { bg: "#F0F9FF", color: "#0369A1" },
 };
+const NEXT_ACTION_PLATFORM_IDS = ["gf", "rd", "li", "pr"];
+const CURRENT_ACTION_SCHEDULES = new Set(["Heute", "Morgen", "Diese Woche"]);
 
 export default function App() {
   const [done, setDone] = useState(loadState);
@@ -67,11 +69,13 @@ export default function App() {
   const pct = Math.round((doneCount / allTasks.length) * 100);
 
   const nextTask = (() => {
-    for (const p of PLATFORMS) {
-      for (const t of p.tasks) {
-        if (!done[t.id]) return { ...t, platform: p.name, url: p.url };
-      }
+    for (const platformId of NEXT_ACTION_PLATFORM_IDS) {
+      const platform = PLATFORMS.find(p => p.id === platformId);
+      const task = platform?.tasks.find(t => !done[t.id] && CURRENT_ACTION_SCHEDULES.has(t.when));
+
+      if (task) return { ...task, platform: platform.name, url: platform.url };
     }
+
     return null;
   })();
 
@@ -173,6 +177,9 @@ export default function App() {
                     {p.tierLabel}
                   </span>
                   <span className="pct-label">{pPct}%</span>
+                  <a href={p.url} target="_blank" rel="noreferrer" className="platform-open-btn">
+                    Öffnen ↗
+                  </a>
                 </div>
               </div>
               <div className="task-list">

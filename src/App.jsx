@@ -138,6 +138,8 @@ function App() {
   const [approvals, setApprovals] = useState([]);
   const [activeView, setActiveView] = useState("today");
   const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [contentReturnView, setContentReturnView] = useState("playbook");
+  const [calendarAnchor, setCalendarAnchor] = useState(() => toLocalDate());
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
   const [dailyBusyId, setDailyBusyId] = useState("");
@@ -360,8 +362,9 @@ function App() {
     }
   };
 
-  const openContent = taskId => {
+  const openContent = (taskId, returnView = activeView) => {
     setSelectedTaskId(taskId);
+    setContentReturnView(returnView === "content" ? "playbook" : returnView);
     setActiveView("content");
   };
 
@@ -553,10 +556,10 @@ function App() {
         </header>
 
         {activeView === "today" && <TodayView nextAction={nextDailyAction} guide={nextDailyAction ? DAILY_ACTION_GUIDES[nextDailyAction.id] : null} todayQueue={todayQueue} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
-        {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} stages={PLAYBOOK_STAGES} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={openContent} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
-        {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView("playbook")} members={members} progress={progress[selectedTask.id]} canAssign={workspace.role === "admin"} onAssign={handleAssignTask} approvals={approvals} userId={session.user.id} canRequestApproval={!LEGACY_COMPLIANCE_NOTES[selectedTask.id]} onSubmitApproval={handleSubmitApproval} onCompleteApproval={handleCompleteApproval} />}
-        {activeView === "team" && <TeamView workspace={workspace} profile={profile} members={members} approvals={approvals} inviteForm={inviteForm} setInviteForm={setInviteForm} busy={busy} onInvite={handleInvite} onDecision={handleApprovalDecision} onOpenContent={openContent} />}
-        {activeView === "progress" && <><CalendarView dailyActions={dailyActions} todayKey={todayKey} onGoToday={() => setActiveView("today")} /><ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} /></>}
+        {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} stages={PLAYBOOK_STAGES} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={taskId => openContent(taskId, "playbook")} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
+        {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView(contentReturnView)} members={members} progress={progress[selectedTask.id]} canAssign={workspace.role === "admin"} onAssign={handleAssignTask} approvals={approvals} userId={session.user.id} canRequestApproval={!LEGACY_COMPLIANCE_NOTES[selectedTask.id]} onSubmitApproval={handleSubmitApproval} onCompleteApproval={handleCompleteApproval} />}
+        {activeView === "team" && <TeamView workspace={workspace} profile={profile} members={members} approvals={approvals} inviteForm={inviteForm} setInviteForm={setInviteForm} busy={busy} onInvite={handleInvite} onDecision={handleApprovalDecision} onOpenContent={taskId => openContent(taskId, "team")} />}
+        {activeView === "progress" && <><CalendarView dailyActions={dailyActions} todayKey={todayKey} selectedDate={calendarAnchor} onSelectDate={setCalendarAnchor} onPreviousWeek={() => setCalendarAnchor(current => toLocalDate(addDays(dateFromIso(current), -7)))} onNextWeek={() => setCalendarAnchor(current => toLocalDate(addDays(dateFromIso(current), 7)))} onGoToday={() => { setCalendarAnchor(todayKey); setActiveView("today"); }} /><ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} /></>}
       </main>
 
       {toast && <div className="toast" role="status">{toast}</div>}
@@ -679,18 +682,31 @@ function SignalCatalog() {
   return <details className="knowledge-card signal-catalog"><summary>Signalquellen & Red GEO <span>Nur bei Bedarf öffnen</span></summary><div className="signal-catalog-body"><p>Der Tagesplan zeigt nur passende Aktionen. Hier siehst du, welche Quellen sich lohnen, welche zuerst geprüft werden müssen und was nicht eingesetzt wird.</p><div className="signal-group-grid">{SIGNAL_CATALOG.map(group => <section className={`signal-group ${group.id}`} key={group.id}><div className="signal-group-head"><b>{group.label}</b><span>{group.summary}</span></div>{group.items.map(item => <article className="signal-source" key={item.title}><div><h3>{item.title}</h3><p>{item.text}</p></div><small>{item.cadence}</small></article>)}</section>)}</div><section className="red-geo-catalog"><div><p className="eyebrow">RED GEO · NICHT AUSFÜHREN</p><h2>Warnwissen statt falscher Abkürzungen.</h2><p>Diese Muster können kurzfristig nach Reichweite aussehen, schaden aber Vertrauen, Plattformkonten oder der langfristigen Sichtbarkeit.</p></div><div className="red-geo-list">{RED_GEO_WARNINGS.map(item => <article key={item.title}><b>{item.title}</b><span>{item.text}</span></article>)}</div></section></div></details>;
 }
 
-function CalendarView({ dailyActions, todayKey, onGoToday }) {
-  const days = Array.from({ length: 7 }, (_, index) => toLocalDate(addDays(new Date(), index - 3)));
+function CalendarView({ dailyActions, todayKey, selectedDate, onSelectDate, onPreviousWeek, onNextWeek, onGoToday }) {
+  const days = Array.from({ length: 7 }, (_, index) => toLocalDate(addDays(dateFromIso(selectedDate), index - 3)));
   const actionCount = DAILY_ACTION_TEMPLATES.length;
+  const selectedActions = dailyActions.filter(action => action.planned_for === selectedDate);
+  const selectedDoneCount = selectedActions.filter(action => action.status === "done").length;
+  const selectedSkippedCount = selectedActions.filter(action => action.status === "skipped").length;
+  const selectedLabel = new Intl.DateTimeFormat("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(dateFromIso(selectedDate));
 
   return (
-    <section className="view-stack"><div className="intro-copy compact"><div className="gradient-pill">KALENDER & NACHWEIS</div><h1>Was wurde wann wirklich getan?</h1><p>Der Tagesplan startet neu. Der Nachweis bleibt zentral erhalten – für dich und später für dein Team.</p></div><div className="calendar-grid">{days.map(day => {
-      const dayActions = dailyActions.filter(action => action.planned_for === day);
-      const doneCount = dayActions.filter(action => action.status === "done").length;
-      const skippedCount = dayActions.filter(action => action.status === "skipped").length;
-      const isToday = day === todayKey;
-      return <article className={`calendar-day ${isToday ? "today" : ""}`} key={day}><div className="calendar-day-head"><span>{isToday ? "Heute" : formatShortDay(day)}</span><b>{doneCount}/{dayActions.length || actionCount}</b></div><div className="calendar-track"><div style={{ width: `${(doneCount / (dayActions.length || actionCount)) * 100}%` }} /></div><p>{dayActions.length ? `${doneCount} erledigt · ${skippedCount} verschoben` : day < todayKey ? "Kein Tagesplan gespeichert" : "Noch nicht gestartet"}</p></article>;
-    })}</div><section className="calendar-history"><p className="eyebrow">LETZTE TAGESAKTIONEN</p>{dailyActions.length ? dailyActions.slice(0, 20).map(action => { const template = dailyActionById(action.template_id); return <div className="calendar-history-row" key={action.id}><div><b>{formatShortDay(action.planned_for)}</b><span>{template?.title || action.template_id}</span></div><em className={action.status}>{action.status === "done" ? "Erledigt" : action.status === "skipped" ? "Verschoben" : "Offen"}</em></div>; }) : <p className="empty-copy">Sobald der erste Tagesplan angelegt ist, erscheint der Verlauf hier.</p>}</section><button className="quiet-button calendar-back" onClick={onGoToday}>Zur heutigen Aktion →</button></section>
+    <section className="view-stack">
+      <div className="intro-copy compact"><div className="gradient-pill">KALENDER & NACHWEIS</div><h1>Was wurde wann wirklich getan?</h1><p>Blättere wochenweise vor oder zurück und tippe einen Tag an. Der Tagesplan wird nur am betreffenden Tag erzeugt – die Historie bleibt unverändert.</p></div>
+      <div className="calendar-navigation" aria-label="Kalendernavigation"><button className="quiet-button" onClick={onPreviousWeek}>← 7 Tage</button><div><b>{formatShortDay(days[0])} – {formatShortDay(days[6])}</b><small>{selectedDate === todayKey ? "Heute ausgewählt" : "Tag ausgewählt"}</small></div><div><button className="quiet-button" onClick={() => onSelectDate(todayKey)}>Heute</button><button className="quiet-button" onClick={onNextWeek}>7 Tage →</button></div></div>
+      <div className="calendar-grid">{days.map(day => {
+        const dayActions = dailyActions.filter(action => action.planned_for === day);
+        const doneCount = dayActions.filter(action => action.status === "done").length;
+        const skippedCount = dayActions.filter(action => action.status === "skipped").length;
+        const isToday = day === todayKey;
+        const isSelected = day === selectedDate;
+        const statusCopy = dayActions.length ? `${doneCount} erledigt · ${skippedCount} verschoben` : day < todayKey ? "Kein Tagesplan gespeichert" : "Noch nicht gestartet";
+        return <button type="button" className={`calendar-day ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}`} onClick={() => onSelectDate(day)} aria-pressed={isSelected} key={day}><div className="calendar-day-head"><span>{isToday ? "Heute" : formatShortDay(day)}</span><b>{doneCount}/{dayActions.length || actionCount}</b></div><div className="calendar-track"><div style={{ width: `${(doneCount / (dayActions.length || actionCount)) * 100}%` }} /></div><p>{statusCopy}</p></button>;
+      })}</div>
+      <section className="calendar-selected-day"><div><p className="eyebrow">AUSGEWÄHLTER TAG</p><h2>{selectedLabel}</h2><p>{selectedActions.length ? `${selectedDoneCount} erledigt · ${selectedSkippedCount} verschoben · ${selectedActions.length - selectedDoneCount - selectedSkippedCount} offen` : selectedDate > todayKey ? "Der Tagesplan wird erst an diesem Tag angelegt. So entstehen keine künstlichen Zukunftseinträge." : "Für diesen Tag wurde kein Tagesplan gespeichert."}</p></div>{selectedActions.length ? <div className="calendar-selected-list">{selectedActions.map(action => { const template = dailyActionById(action.template_id); return <article key={action.id}><span className={action.status}>{action.status === "done" ? "✓" : action.status === "skipped" ? "→" : "•"}</span><div><b>{template?.title || action.template_id}</b><small>{template?.platform || "GEO Playbook"}</small></div><em className={action.status}>{action.status === "done" ? "Erledigt" : action.status === "skipped" ? "Verschoben" : "Offen"}</em></article>; })}</div> : null}</section>
+      <section className="calendar-history"><p className="eyebrow">LETZTE TAGESAKTIONEN</p>{dailyActions.length ? dailyActions.slice(0, 20).map(action => { const template = dailyActionById(action.template_id); return <button type="button" className="calendar-history-row" onClick={() => onSelectDate(action.planned_for)} key={action.id}><div><b>{formatShortDay(action.planned_for)}</b><span>{template?.title || action.template_id}</span></div><em className={action.status}>{action.status === "done" ? "Erledigt" : action.status === "skipped" ? "Verschoben" : "Offen"}</em></button>; }) : <p className="empty-copy">Sobald der erste Tagesplan angelegt ist, erscheint der Verlauf hier.</p>}</section>
+      <button className="quiet-button calendar-back" onClick={onGoToday}>Zur heutigen Aktion →</button>
+    </section>
   );
 }
 

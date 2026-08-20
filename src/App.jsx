@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PLATFORMS } from "./data/tasks";
 import { AUTHORITY_PILLARS, DAILY_ACTION_TEMPLATES, RISK_COPY } from "./data/dailyActions";
 import { CONTENT_SOP, DAILY_ACTION_GUIDES, PLAYBOOK_STAGES, WEEKLY_REVIEW } from "./data/knowledgeModules";
-import { LEGACY_COMPLIANCE_NOTES, RED_GEO_WARNINGS, SIGNAL_CATALOG } from "./data/platformCatalog";
+import { EXTERNAL_LINK_CHECK, LEGACY_COMPLIANCE_NOTES, RED_GEO_WARNINGS, SIGNAL_CATALOG } from "./data/platformCatalog";
 import { isSupabaseConfigured, supabase } from "./supabase";
 import {
   bootstrapWorkspace,
@@ -465,9 +465,16 @@ function OnboardingScreen({ name, setName, workspaceName, setWorkspaceName, busy
 }
 
 function TodayView({ nextAction, guide, todayQueue, todayDoneCount, todaySkippedCount, totalCount, onUpdate, busyId, onShowCalendar, setupDoneCount, setupTotal }) {
+  const [externalChecks, setExternalChecks] = useState({});
   const statusLabel = nextAction ? RISK_COPY[nextAction.risk] : null;
   const progress = totalCount ? Math.round((todayDoneCount / totalCount) * 100) : 0;
   const finishedActions = todayQueue.filter(action => action.instance.status === "done" || action.instance.status === "skipped");
+  const needsExternalCheck = nextAction?.risk === "amber";
+  const allExternalChecksPassed = EXTERNAL_LINK_CHECK.every(item => externalChecks[item.id]);
+
+  useEffect(() => {
+    setExternalChecks({});
+  }, [nextAction?.instance.id]);
 
   return (
     <section className="view-stack">
@@ -481,6 +488,7 @@ function TodayView({ nextAction, guide, todayQueue, todayDoneCount, todaySkipped
             <p className="focus-meta">{nextAction.detail}</p>
             <div className={`risk-chip ${nextAction.risk}`}><b>{statusLabel.label}</b><span>{statusLabel.text}</span></div>
             {guide && <ActionGuide guide={guide} />}
+            {needsExternalCheck && <ExternalLinkCheck platform={nextAction.platform} interactive checks={externalChecks} onChange={setExternalChecks} allPassed={allExternalChecksPassed} />}
             <div className="focus-actions"><button className="primary-button" onClick={() => onUpdate(nextAction.instance, "done")} disabled={busyId === nextAction.instance.id}>{busyId === nextAction.instance.id ? "Wird gespeichert …" : "Als erledigt markieren"}</button><button className="quiet-button" onClick={() => onUpdate(nextAction.instance, "skipped")} disabled={busyId === nextAction.instance.id}>Heute verschieben</button></div>
           </div>
         </article>
@@ -507,6 +515,10 @@ function TodayHistory({ actions }) {
 
 function ActionGuide({ guide }) {
   return <details className="knowledge-card action-guide"><summary>So gehst du bei dieser Aktion vor <span>Mehr anzeigen</span></summary><div className="knowledge-guide-grid"><div><b>Warum?</b><p>{guide.why}</p></div><div><b>So gehst du vor</b><p>{guide.how}</p></div><div><b>Nicht tun</b><p>{guide.avoid}</p></div><div><b>Fertig, wenn …</b><p>{guide.done}</p></div></div></details>;
+}
+
+function ExternalLinkCheck({ platform, interactive = false, checks = {}, onChange, allPassed = false }) {
+  return <details className={`knowledge-card external-link-check ${interactive ? "interactive" : ""}`} open={interactive ? true : undefined}><summary>4-Kriterien-Prüfung für externe Erwähnung <span>{interactive ? "Jetzt prüfen" : "Bei Plattformchance öffnen"}</span></summary><div className="external-link-check-body"><p>Für <b>{platform}</b>: Eine Erwähnung ist nur vertretbar, wenn alle vier Antworten klar „Ja“ sind.</p><div className="external-check-list">{EXTERNAL_LINK_CHECK.map(item => interactive ? <label className={checks[item.id] ? "checked" : ""} key={item.id}><input type="checkbox" checked={Boolean(checks[item.id])} onChange={event => onChange(current => ({ ...current, [item.id]: event.target.checked }))} /><span><b>{item.title}</b>{item.text}</span></label> : <article key={item.id}><b>{item.title}</b><span>{item.text}</span><em>{item.fail}</em></article>)}</div>{interactive && <p className={`external-check-result ${allPassed ? "approved" : "pending"}`}>{allPassed ? "Grün: Eine transparente Erwähnung kann erwogen werden. Veröffentlichen bleibt ein eigener, kontrollierter Schritt." : "Gelb: Wenn auch nur ein Kriterium offen bleibt, dokumentiere die Chance – aber veröffentliche keinen Link."}</p>}</div></details>;
 }
 
 function KnowledgePath({ stages }) {
@@ -537,7 +549,7 @@ function AuthorityView({ pillars, stages, done, progress, onToggle, onOpenConten
         return <article className={`platform-module ${isRedPlatform ? "red-platform" : ""}`} key={platform.id}><div className="module-head"><div><p className="eyebrow">{platform.tierLabel}</p><h2>{platform.name}</h2></div><span>{isRedPlatform ? "Red GEO" : `${platformPercentage}%`}</span></div><div className="mini-track"><div style={{ width: `${platformPercentage}%` }} /></div><div className="module-tasks">{platform.tasks.map(task => {
           const complianceNote = LEGACY_COMPLIANCE_NOTES[task.id];
           return <div className={`task-block ${complianceNote ? "legacy-risk" : ""}`} key={task.id}><div className={`task-item ${done[task.id] ? "done" : ""}`}><button className="task-check" aria-label={complianceNote ? `${task.text} nicht ausführen` : `${task.text} ${done[task.id] ? "wieder öffnen" : "erledigen"}`} onClick={() => onToggle(task.id)} disabled={Boolean(complianceNote)}>{done[task.id] ? "✓" : ""}</button><button className="task-copy" onClick={() => onOpenContent(task.id)} disabled={Boolean(complianceNote)}><span>{task.text}</span><small>{task.when}{progress[task.id]?.completed_at ? ` · ${formatDate(progress[task.id].completed_at)}` : ""}</small></button></div>{complianceNote && <p className="legacy-compliance-note"><b>Red GEO · nicht ausführen</b>{complianceNote}</p>}</div>;
-        })}</div><a href={platform.url} target="_blank" rel="noreferrer" className="module-link">Plattform öffnen <span>↗</span></a></article>;
+        })}</div>{!isRedPlatform && <ExternalLinkCheck platform={platform.name} />}<a href={platform.url} target="_blank" rel="noreferrer" className="module-link">Plattform öffnen <span>↗</span></a></article>;
       })}</div>
     </section>
   );

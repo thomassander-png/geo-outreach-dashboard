@@ -377,3 +377,29 @@ a { color: inherit; }
   .signal-source { grid-template-columns: 1fr; }
   .signal-source small { width: fit-content; max-width: none; }
 }
+
+/* 4-Kriterien-Prüfung für externe Erwähnungen */
+.external-link-check { max-width: 650px; margin-top: 16px; border-color: #eadbb9; background: linear-gradient(135deg, #fffdf8, #fff9ef); }
+.external-link-check:not(.interactive) { margin: 10px 0 0; background: #fffdf9; }
+.external-link-check-body { display: grid; gap: 12px; padding: 15px 16px 16px; }
+.external-link-check-body > p { margin: 0; color: #807887; font-size: 11px; line-height: 1.5; }
+.external-link-check-body > p b { color: #735c2b; }
+.external-check-list { display: grid; gap: 7px; }
+.external-check-list label, .external-check-list article { display: grid; grid-template-columns: 20px 1fr; gap: 9px; align-items: start; padding: 10px; border: 1px solid #eee2c9; border-radius: 10px; background: rgba(255, 255, 255, .72); }
+.external-check-list label { cursor: pointer; transition: border .18s ease, background .18s ease; }
+.external-check-list label:hover { border-color: #d7bb7c; }
+.external-check-list label.checked { border-color: #a9cfb7; background: #f3fbf6; }
+.external-check-list input { width: 16px; height: 16px; margin: 1px 0 0; accent-color: #5ab99b; }
+.external-check-list label span, .external-check-list article { color: #7c7480; font-size: 11px; line-height: 1.45; }
+.external-check-list label b, .external-check-list article b { display: block; margin-bottom: 2px; color: #5c5542; font-size: 11px; }
+.external-check-list article { grid-template-columns: 1fr; gap: 3px; }
+.external-check-list article span { color: #827a86; }
+.external-check-list article em { color: #aa7572; font-size: 10px; font-style: normal; line-height: 1.4; }
+.external-check-result { padding: 10px 11px; border-radius: 10px; font-weight: 700; }
+.external-check-result.pending { color: #936c28; background: #fff2d8; }
+.external-check-result.approved { color: #31755d; background: #eaf8f0; }
+
+@media (max-width: 620px) {
+  .external-link-check-body { padding: 13px; }
+  .external-link-check:not(.interactive) { margin-top: 9px; }
+}

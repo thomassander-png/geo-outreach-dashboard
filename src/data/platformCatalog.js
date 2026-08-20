@@ -55,6 +55,33 @@ export const SIGNAL_CATALOG = [
   },
 ];
 
+export const EXTERNAL_LINK_CHECK = [
+  {
+    id: "allowed",
+    title: "Erlaubt?",
+    text: "Erlauben die konkreten Plattform- und Community-Regeln diese transparente Erwähnung?",
+    fail: "Ohne klares Ja: nicht veröffentlichen.",
+  },
+  {
+    id: "relevant",
+    title: "Relevant?",
+    text: "Beantwortet oder ergänzt geo-tool.com genau diese konkrete Frage nachweisbar?",
+    fail: "Ohne klaren Nutzen: bei der hilfreichen Antwort ohne Link bleiben.",
+  },
+  {
+    id: "transparent",
+    title: "Transparent?",
+    text: "Ist eure Rolle beziehungsweise Beziehung zum Link offen und verständlich?",
+    fail: "Ohne Transparenz: nicht veröffentlichen.",
+  },
+  {
+    id: "helpful",
+    title: "Mehrwert?",
+    text: "Wäre die Antwort auch ohne Link für die Person oder Community hilfreich?",
+    fail: "Wenn nein: nicht veröffentlichen.",
+  },
+];
+
 export const RED_GEO_WARNINGS = [
   {
     title: "Verdeckte Linkstrategie",

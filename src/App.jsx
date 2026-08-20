@@ -127,6 +127,28 @@ function roleLabel(role) {
   return "Mitglied";
 }
 
+function playRewardChime() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return;
+
+  const context = new AudioContextClass();
+  const start = context.currentTime + 0.01;
+  [523.25, 659.25, 783.99].forEach((frequency, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const noteStart = start + (index * 0.09);
+    oscillator.type = index === 2 ? "sine" : "triangle";
+    oscillator.frequency.setValueAtTime(frequency, noteStart);
+    gain.gain.setValueAtTime(0.0001, noteStart);
+    gain.gain.exponentialRampToValueAtTime(0.045 - (index * 0.007), noteStart + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.42);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(noteStart);
+    oscillator.stop(noteStart + 0.45);
+  });
+  window.setTimeout(() => context.close().catch(() => {}), 900);
+}
+
 function App() {
   const [screen, setScreen] = useState(isSupabaseConfigured ? "loading" : "configuration");
   const [session, setSession] = useState(null);
@@ -145,6 +167,8 @@ function App() {
   const [contentReturnView, setContentReturnView] = useState("playbook");
   const [calendarAnchor, setCalendarAnchor] = useState(() => toLocalDate());
   const [toast, setToast] = useState("");
+  const [celebration, setCelebration] = useState(null);
+  const [rewardSoundOn, setRewardSoundOn] = useState(() => window.localStorage.getItem("geo-playbook-reward-sound") !== "off");
   const [busy, setBusy] = useState(false);
   const [dailyBusyId, setDailyBusyId] = useState("");
   const [loginEmail, setLoginEmail] = useState("");
@@ -182,6 +206,21 @@ function App() {
   const showToast = message => {
     setToast(message);
     window.setTimeout(() => setToast(""), 2600);
+  };
+
+  const triggerReward = (title, detail) => {
+    const id = Date.now();
+    setCelebration({ id, title, detail });
+    if (rewardSoundOn) playRewardChime();
+    window.setTimeout(() => setCelebration(current => current?.id === id ? null : current), 3400);
+  };
+
+  const toggleRewardSound = () => {
+    setRewardSoundOn(current => {
+      const next = !current;
+      window.localStorage.setItem("geo-playbook-reward-sound", next ? "on" : "off");
+      return next;
+    });
   };
 
   const hydrateWorkspace = async (workspaceData, userId) => {
@@ -323,6 +362,7 @@ function App() {
         created_at: new Date().toISOString(),
       }, ...current].slice(0, 12));
       showToast(nextStatus === "done" ? "Erledigt – die nächste Aktion ist bereit." : nextStatus === "skipped" ? "Für heute verschoben. Die nächste Aktion ist bereit." : "Aktion wieder geöffnet.");
+      if (nextStatus === "done") triggerReward("Tagesaktion abgeschlossen", "Die nächste klare Aufgabe ist bereit.");
     } catch (error) {
       setDailyActions(previousActions);
       showToast(errorMessage(error));
@@ -363,6 +403,7 @@ function App() {
         created_at: new Date().toISOString(),
       }, ...current].slice(0, 12));
       showToast(nextValue ? "Aufbau-Schritt gespeichert." : `„${task?.text || "Aufgabe"}“ ist wieder offen.`);
+      if (nextValue) triggerReward("Aufbau-Schritt abgeschlossen", "Dein GEO-Fundament wächst.");
     } catch (error) {
       setDone(previousDone);
       setProgress(previousProgress);
@@ -399,6 +440,7 @@ function App() {
         created_at: new Date().toISOString(),
       }, ...current].slice(0, 12));
       showToast("Content-Status gespeichert.");
+      if (contentForm.status === "done") triggerReward("Content abgeschlossen", "Dein nächster fokussierter Schritt ist bereit.");
     } catch (error) {
       showToast(errorMessage(error));
     } finally {
@@ -488,6 +530,7 @@ function App() {
       await completeApprovedAction({ requestId, publicationUrl, resultNote });
       await refreshWorkspace();
       showToast("Ausführung und Ergebnis sind zentral dokumentiert.");
+      triggerReward("Teammaßnahme abgeschlossen", "Ergebnis und Verantwortung sind sauber dokumentiert.");
     } catch (error) {
       showToast(errorMessage(error));
     } finally {
@@ -557,9 +600,12 @@ function App() {
             <p className="eyebrow">GEO PLAYBOOK · 10ER-TAGESPLAN</p>
             <p className="date-label">{todayLabel}</p>
           </div>
-          <div className="profile-control">
-            <div className="avatar">{profile.display_name.slice(0, 1).toUpperCase()}</div>
-            <div><strong>{profile.display_name}</strong><span>{roleLabel(workspace.role)}</span></div>
+          <div className="topbar-actions">
+            <button className="sound-toggle" type="button" aria-pressed={rewardSoundOn} onClick={toggleRewardSound}>Sound: {rewardSoundOn ? "an" : "aus"}</button>
+            <div className="profile-control">
+              <div className="avatar">{profile.display_name.slice(0, 1).toUpperCase()}</div>
+              <div><strong>{profile.display_name}</strong><span>{roleLabel(workspace.role)}</span></div>
+            </div>
           </div>
         </header>
 
@@ -571,6 +617,7 @@ function App() {
         {activeView === "intelligence" && <IntelligenceView workspace={workspace} data={intelligenceData} onRefresh={refreshWorkspace} />}
       </main>
 
+      {celebration && <div className="reward-celebration" role="status" aria-live="polite"><div className="reward-sparkles" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map(item => <i key={item} />)}</div><p>ABSCHLUSS GESPEICHERT</p><strong>{celebration.title}</strong><span>{celebration.detail}</span></div>}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PLATFORMS } from "./data/tasks";
 import { AUTHORITY_PILLARS, DAILY_ACTION_TEMPLATES, RISK_COPY } from "./data/dailyActions";
+import { CONTENT_SOP, DAILY_ACTION_GUIDES, PLAYBOOK_STAGES, WEEKLY_REVIEW } from "./data/knowledgeModules";
 import { isSupabaseConfigured, supabase } from "./supabase";
 import {
   bootstrapWorkspace,
@@ -430,8 +431,8 @@ function App() {
           </div>
         </header>
 
-        {activeView === "today" && <TodayView nextAction={nextDailyAction} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
-        {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={openContent} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
+        {activeView === "today" && <TodayView nextAction={nextDailyAction} guide={nextDailyAction ? DAILY_ACTION_GUIDES[nextDailyAction.id] : null} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
+        {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} stages={PLAYBOOK_STAGES} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={openContent} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
         {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView("playbook")} />}
         {activeView === "progress" && <><CalendarView dailyActions={dailyActions} todayKey={todayKey} onGoToday={() => setActiveView("today")} /><ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} /></>}
       </main>
@@ -461,7 +462,7 @@ function OnboardingScreen({ name, setName, workspaceName, setWorkspaceName, busy
   );
 }
 
-function TodayView({ nextAction, todayDoneCount, todaySkippedCount, totalCount, onUpdate, busyId, onShowCalendar, setupDoneCount, setupTotal }) {
+function TodayView({ nextAction, guide, todayDoneCount, todaySkippedCount, totalCount, onUpdate, busyId, onShowCalendar, setupDoneCount, setupTotal }) {
   const statusLabel = nextAction ? RISK_COPY[nextAction.risk] : null;
   const progress = totalCount ? Math.round((todayDoneCount / totalCount) * 100) : 0;
 
@@ -476,6 +477,7 @@ function TodayView({ nextAction, todayDoneCount, todaySkippedCount, totalCount, 
             <h2>{nextAction.title}</h2>
             <p className="focus-meta">{nextAction.detail}</p>
             <div className={`risk-chip ${nextAction.risk}`}><b>{statusLabel.label}</b><span>{statusLabel.text}</span></div>
+            {guide && <ActionGuide guide={guide} />}
             <div className="focus-actions"><button className="primary-button" onClick={() => onUpdate(nextAction.instance, "done")} disabled={busyId === nextAction.instance.id}>{busyId === nextAction.instance.id ? "Wird gespeichert …" : "Als erledigt markieren"}</button><button className="quiet-button" onClick={() => onUpdate(nextAction.instance, "skipped")} disabled={busyId === nextAction.instance.id}>Heute verschieben</button></div>
           </div>
         </article>
@@ -492,11 +494,28 @@ function TodayView({ nextAction, todayDoneCount, todaySkippedCount, totalCount, 
   );
 }
 
-function AuthorityView({ pillars, done, progress, onToggle, onOpenContent, setupDoneCount, setupTotal }) {
+function ActionGuide({ guide }) {
+  return <details className="knowledge-card action-guide"><summary>So gehst du bei dieser Aktion vor <span>Mehr anzeigen</span></summary><div className="knowledge-guide-grid"><div><b>Warum?</b><p>{guide.why}</p></div><div><b>So gehst du vor</b><p>{guide.how}</p></div><div><b>Nicht tun</b><p>{guide.avoid}</p></div><div><b>Fertig, wenn …</b><p>{guide.done}</p></div></div></details>;
+}
+
+function KnowledgePath({ stages }) {
+  return <section className="knowledge-path"><div><p className="eyebrow">WISSEN, WENN DU ES BRAUCHST</p><h2>Vier Etappen für nachhaltige GEO-Arbeit.</h2><p>Öffne nur die Etappe, die gerade zu deiner Aufgabe passt.</p></div><div className="stage-list">{stages.map(stage => <details className="knowledge-card stage-card" key={stage.id}><summary><span className="stage-number">{stage.number}</span><span><b>{stage.title}</b><small>{stage.summary}</small></span><em>Öffnen</em></summary><div className="stage-body"><p><b>Nächster sinnvoller Schritt:</b> {stage.next}</p><div>{stage.cards.map(card => <article key={card.title}><h3>{card.title}</h3><p>{card.text}</p></article>)}</div></div></details>)}</div></section>;
+}
+
+function ContentSop() {
+  return <details className="knowledge-card content-sop"><summary>Content-SOP: fünf klare Schritte <span>Mehr anzeigen</span></summary><ol>{CONTENT_SOP.map(([number, title, text]) => <li key={number}><b>{number} · {title}</b><span>{text}</span></li>)}</ol></details>;
+}
+
+function WeeklyReview() {
+  return <details className="knowledge-card weekly-review"><summary>10-Minuten-Wochenreview <span>Mehr anzeigen</span></summary><p>Nutze den Kalender und die echten Ergebnisse. Triff nur diese drei Entscheidungen:</p><div>{WEEKLY_REVIEW.map(([title, text]) => <article key={title}><b>{title}</b><span>{text}</span></article>)}</div></details>;
+}
+
+function AuthorityView({ pillars, stages, done, progress, onToggle, onOpenContent, setupDoneCount, setupTotal }) {
   return (
     <section className="view-stack">
       <div className="intro-copy compact"><div className="gradient-pill">DEIN GEO-PLAYBOOK</div><h1>Grundlagen, Plattformen und klare Outreach-Schritte.</h1><p>Hier liegt das Fundament: echte Fachlichkeit, nachvollziehbare Belege und passende Beteiligung – nicht bloß viele Links.</p></div>
       <div className="pillar-grid">{pillars.map(pillar => <article className="pillar-card" key={pillar.title}><span>{pillar.status}</span><h2>{pillar.title}</h2><p>{pillar.text}</p></article>)}</div>
+      <KnowledgePath stages={stages} />
       <article className="setup-summary"><div><p className="eyebrow">AUFBAU-PLAYBOOK</p><h2>{setupDoneCount} von {setupTotal} Grundlagen erledigt</h2><p>Die ursprünglichen Aufbauaufgaben bleiben vollständig erhalten und werden separat vom Tagesbetrieb geführt.</p></div><div className="progress-track"><div style={{ width: `${Math.round((setupDoneCount / setupTotal) * 100)}%` }} /></div></article>
       <div className="playbook-grid">{PLATFORMS.map(platform => {
         const platformDone = platform.tasks.filter(task => done[task.id]).length;
@@ -525,7 +544,7 @@ function CalendarView({ dailyActions, todayKey, onGoToday }) {
 function ContentView({ task, form, setForm, busy, onSave, onBack }) {
   const status = CONTENT_STATUSES.find(item => item.id === form.status)?.label || "Idee";
   return (
-    <section className="view-stack"><button className="back-button" onClick={onBack}>← Zurück zum Playbook</button><div className="intro-copy compact"><div className="gradient-pill">CONTENT-WORKFLOW · {status.toUpperCase()}</div><h1>{task.text}</h1><p>{task.platform} · {task.when}</p></div><form className="content-editor" onSubmit={onSave}><div className="editor-head"><div><p className="eyebrow">SCHRITT FÜR SCHRITT</p><h2>Content vorbereiten</h2></div><a href={task.url} target="_blank" rel="noreferrer" className="quiet-button">Plattform öffnen ↗</a></div><label htmlFor="content-status">Status</label><div className="status-options" id="content-status">{CONTENT_STATUSES.map(item => <button type="button" className={form.status === item.id ? "selected" : ""} onClick={() => setForm(current => ({ ...current, status: item.id }))} key={item.id}>{item.label}</button>)}</div><label htmlFor="briefing">Kurzes Briefing</label><textarea id="briefing" value={form.briefing} onChange={event => setForm(current => ({ ...current, briefing: event.target.value }))} placeholder="Wem hilft dieser Beitrag? Was ist die eine klare Aussage?" rows="4" /><label htmlFor="draft">Entwurf</label><textarea id="draft" value={form.draft} onChange={event => setForm(current => ({ ...current, draft: event.target.value }))} placeholder="Entwurf hier festhalten …" rows="10" /><div className="editor-footer"><p>Der Entwurf wird zentral gespeichert. Veröffentlichen bleibt ein eigener, kontrollierter Schritt.</p><button className="primary-button" disabled={busy}>{busy ? "Wird gespeichert …" : "Content speichern"}</button></div></form></section>
+    <section className="view-stack"><button className="back-button" onClick={onBack}>← Zurück zum Playbook</button><div className="intro-copy compact"><div className="gradient-pill">CONTENT-WORKFLOW · {status.toUpperCase()}</div><h1>{task.text}</h1><p>{task.platform} · {task.when}</p></div><ContentSop /><form className="content-editor" onSubmit={onSave}><div className="editor-head"><div><p className="eyebrow">SCHRITT FÜR SCHRITT</p><h2>Content vorbereiten</h2></div><a href={task.url} target="_blank" rel="noreferrer" className="quiet-button">Plattform öffnen ↗</a></div><label htmlFor="content-status">Status</label><div className="status-options" id="content-status">{CONTENT_STATUSES.map(item => <button type="button" className={form.status === item.id ? "selected" : ""} onClick={() => setForm(current => ({ ...current, status: item.id }))} key={item.id}>{item.label}</button>)}</div><label htmlFor="briefing">Kurzes Briefing</label><textarea id="briefing" value={form.briefing} onChange={event => setForm(current => ({ ...current, briefing: event.target.value }))} placeholder="Wem hilft dieser Beitrag? Was ist die eine klare Aussage?" rows="4" /><label htmlFor="draft">Entwurf</label><textarea id="draft" value={form.draft} onChange={event => setForm(current => ({ ...current, draft: event.target.value }))} placeholder="Entwurf hier festhalten …" rows="10" /><div className="editor-footer"><p>Der Entwurf wird zentral gespeichert. Veröffentlichen bleibt ein eigener, kontrollierter Schritt.</p><button className="primary-button" disabled={busy}>{busy ? "Wird gespeichert …" : "Content speichern"}</button></div></form></section>
   );
 }
 
@@ -534,7 +553,7 @@ function ProgressView({ activity, profileName, setProfileName, busy, onSaveName,
   const setupPercentage = Math.round((setupDoneCount / setupTotal) * 100);
 
   return (
-    <section className="view-stack"><div className="intro-copy compact"><div className="gradient-pill">ZENTRAL & NACHVOLLZIEHBAR</div><h1>Dein System lernt aus echter Arbeit.</h1><p>Der Tagesbetrieb zeigt deine heutige Bewegung. Das Aufbau-Playbook zeigt, wie weit dein Fundament bereits steht.</p></div><div className="progress-summary"><strong>{dailyPercentage}%</strong><div><h2>{todayDoneCount} von {totalCount} Tagesaktionen erledigt</h2><div className="progress-track"><div style={{ width: `${dailyPercentage}%` }} /></div><p className="secondary-progress">Aufbau-Fundament: {setupDoneCount} von {setupTotal} · {setupPercentage}%</p></div></div><div className="progress-columns"><article className="activity-card"><p className="eyebrow">LETZTE AKTIVITÄTEN</p>{activity.length ? activity.map(item => <div className="activity-row" key={item.id}><span className="activity-dot" /><div><p><b>{item.actor_name}</b> {activityLabel(item.action, item.task_id)}</p><small>{formatDate(item.created_at)}</small></div></div>) : <p className="empty-copy">Dein Aktivitätsverlauf erscheint nach dem ersten gespeicherten Schritt.</p>}</article><article className="profile-card"><p className="eyebrow">DEIN ADMIN-KONTO</p><form onSubmit={onSaveName}><label htmlFor="profile-name">Anzeigename</label><input id="profile-name" value={profileName} onChange={event => setProfileName(event.target.value)} required /><button className="quiet-button" disabled={busy}>Name speichern</button></form><button className="signout-button" onClick={onSignOut} disabled={busy}>Abmelden</button></article></div></section>
+    <section className="view-stack"><div className="intro-copy compact"><div className="gradient-pill">ZENTRAL & NACHVOLLZIEHBAR</div><h1>Dein System lernt aus echter Arbeit.</h1><p>Der Tagesbetrieb zeigt deine heutige Bewegung. Das Aufbau-Playbook zeigt, wie weit dein Fundament bereits steht.</p></div><WeeklyReview /><div className="progress-summary"><strong>{dailyPercentage}%</strong><div><h2>{todayDoneCount} von {totalCount} Tagesaktionen erledigt</h2><div className="progress-track"><div style={{ width: `${dailyPercentage}%` }} /></div><p className="secondary-progress">Aufbau-Fundament: {setupDoneCount} von {setupTotal} · {setupPercentage}%</p></div></div><div className="progress-columns"><article className="activity-card"><p className="eyebrow">LETZTE AKTIVITÄTEN</p>{activity.length ? activity.map(item => <div className="activity-row" key={item.id}><span className="activity-dot" /><div><p><b>{item.actor_name}</b> {activityLabel(item.action, item.task_id)}</p><small>{formatDate(item.created_at)}</small></div></div>) : <p className="empty-copy">Dein Aktivitätsverlauf erscheint nach dem ersten gespeicherten Schritt.</p>}</article><article className="profile-card"><p className="eyebrow">DEIN ADMIN-KONTO</p><form onSubmit={onSaveName}><label htmlFor="profile-name">Anzeigename</label><input id="profile-name" value={profileName} onChange={event => setProfileName(event.target.value)} required /><button className="quiet-button" disabled={busy}>Name speichern</button></form><button className="signout-button" onClick={onSignOut} disabled={busy}>Abmelden</button></article></div></section>
   );
 }
 

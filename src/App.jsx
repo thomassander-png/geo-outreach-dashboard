@@ -127,26 +127,51 @@ function roleLabel(role) {
   return "Mitglied";
 }
 
-function playRewardChime() {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return;
+let rewardAudioContext;
 
-  const context = new AudioContextClass();
-  const start = context.currentTime + 0.01;
-  [523.25, 659.25, 783.99].forEach((frequency, index) => {
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    const noteStart = start + (index * 0.09);
-    oscillator.type = index === 2 ? "sine" : "triangle";
-    oscillator.frequency.setValueAtTime(frequency, noteStart);
-    gain.gain.setValueAtTime(0.0001, noteStart);
-    gain.gain.exponentialRampToValueAtTime(0.045 - (index * 0.007), noteStart + 0.018);
-    gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.42);
-    oscillator.connect(gain).connect(context.destination);
-    oscillator.start(noteStart);
-    oscillator.stop(noteStart + 0.45);
-  });
-  window.setTimeout(() => context.close().catch(() => {}), 900);
+function getRewardAudioContext() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!rewardAudioContext || rewardAudioContext.state === "closed") rewardAudioContext = new AudioContextClass();
+  return rewardAudioContext;
+}
+
+function unlockRewardChime() {
+  const context = getRewardAudioContext();
+  if (!context) return;
+  if (context.state === "suspended") context.resume().catch(() => {});
+
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  gain.gain.setValueAtTime(0.00001, context.currentTime);
+  oscillator.connect(gain).connect(context.destination);
+  oscillator.start();
+  oscillator.stop(context.currentTime + 0.01);
+}
+
+function playRewardChime() {
+  const context = getRewardAudioContext();
+  if (!context) return;
+
+  const scheduleChime = () => {
+    const start = context.currentTime + 0.01;
+    [523.25, 659.25, 783.99].forEach((frequency, index) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const noteStart = start + (index * 0.09);
+      oscillator.type = index === 2 ? "sine" : "triangle";
+      oscillator.frequency.setValueAtTime(frequency, noteStart);
+      gain.gain.setValueAtTime(0.0001, noteStart);
+      gain.gain.exponentialRampToValueAtTime(0.06 - (index * 0.009), noteStart + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.46);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(noteStart);
+      oscillator.stop(noteStart + 0.5);
+    });
+  };
+
+  if (context.state === "suspended") context.resume().then(scheduleChime).catch(() => {});
+  else scheduleChime();
 }
 
 function App() {
@@ -340,6 +365,7 @@ function App() {
   };
 
   const handleDailyAction = async (instance, nextStatus) => {
+    if (nextStatus === "done" && rewardSoundOn) unlockRewardChime();
     const previousActions = dailyActions;
     const completedAt = nextStatus === "done" ? new Date().toISOString() : null;
     setDailyBusyId(instance.id);
@@ -373,6 +399,7 @@ function App() {
 
   const handleTaskToggle = async taskId => {
     const nextValue = !done[taskId];
+    if (nextValue && rewardSoundOn) unlockRewardChime();
     const previousDone = done;
     const previousProgress = progress;
     const task = taskById(taskId);
@@ -420,6 +447,7 @@ function App() {
   const saveContent = async event => {
     event.preventDefault();
     if (!selectedTask) return;
+    if (contentForm.status === "done" && rewardSoundOn) unlockRewardChime();
 
     setBusy(true);
     try {
@@ -525,6 +553,7 @@ function App() {
   };
 
   const handleCompleteApproval = async (requestId, publicationUrl, resultNote) => {
+    if (rewardSoundOn) unlockRewardChime();
     setBusy(true);
     try {
       await completeApprovedAction({ requestId, publicationUrl, resultNote });

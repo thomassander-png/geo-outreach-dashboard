@@ -647,3 +647,8 @@ a { color: inherit; }
   .reward-celebration span { font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .reward-celebration, .reward-sparkles i { animation: none; } .reward-sparkles { display: none; } }
+
+.auth-hint, .auth-error { margin: 18px 0 0; padding: 12px 13px; border-radius: 12px; font-size: 12px; line-height: 1.5; }
+.auth-hint { color: #635c73; border: 1px solid #e1dceb; background: #f8f6fc; }
+.auth-error { color: #984f56; border: 1px solid #efd0d2; background: #fff7f7; }
+.auth-form .primary-button:disabled { cursor: not-allowed; }

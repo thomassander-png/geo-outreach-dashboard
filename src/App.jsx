@@ -198,6 +198,8 @@ function App() {
   const [dailyBusyId, setDailyBusyId] = useState("");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginSent, setLoginSent] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loginCooldownEndsAt, setLoginCooldownEndsAt] = useState(0);
   const [setupName, setSetupName] = useState("Tommy");
   const [workspaceName, setWorkspaceName] = useState("GEO Playbook");
   const [profileName, setProfileName] = useState("");
@@ -327,6 +329,13 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!loginCooldownEndsAt) return undefined;
+    const remaining = Math.max(0, loginCooldownEndsAt - Date.now());
+    const timeout = window.setTimeout(() => setLoginCooldownEndsAt(0), remaining);
+    return () => window.clearTimeout(timeout);
+  }, [loginCooldownEndsAt]);
+
+  useEffect(() => {
     if (!selectedContentTaskId) return;
     const item = contentItems[selectedContentTaskId];
     setContentForm({
@@ -338,12 +347,20 @@ function App() {
 
   const handleLogin = async event => {
     event.preventDefault();
+    if (loginCooldownEndsAt > Date.now()) return;
+    setLoginError("");
     setBusy(true);
     try {
       await requestMagicLink(loginEmail.trim());
       setLoginSent(true);
     } catch (error) {
-      showToast(errorMessage(error));
+      const message = errorMessage(error);
+      if (/email.*rate|rate.*email|zu viele/i.test(message)) {
+        setLoginError("Zu viele Anmeldelinks wurden in kurzer Zeit angefordert. Nutze bitte einen bereits gesendeten Link in deinem E-Mail-Postfach. Neue Links sind vorübergehend gesperrt.");
+        setLoginCooldownEndsAt(Date.now() + (10 * 60 * 1000));
+      } else {
+        setLoginError(message);
+      }
     } finally {
       setBusy(false);
     }
@@ -598,7 +615,7 @@ function App() {
   if (screen === "configuration") return <ConfigurationScreen />;
   if (screen === "loading") return <StateScreen eyebrow="GEO PLAYBOOK" title="Dein Arbeitsbereich wird geladen." text="Einen Moment – wir rufen deinen Tagesplan und deinen Fortschritt ab." />;
   if (screen === "error") return <StateScreen eyebrow="VERBINDUNG PRÜFEN" title="Der Arbeitsbereich ist gerade nicht erreichbar." text="Bitte prüfe die zentrale Datenbank-Konfiguration und lade die Seite danach neu." />;
-  if (screen === "login") return <AuthScreen email={loginEmail} setEmail={setLoginEmail} sent={loginSent} busy={busy} onSubmit={handleLogin} />;
+  if (screen === "login") return <AuthScreen email={loginEmail} setEmail={setLoginEmail} sent={loginSent} error={loginError} busy={busy} coolingDown={loginCooldownEndsAt > Date.now()} onSubmit={handleLogin} />;
   if (screen === "onboarding") return <OnboardingScreen name={setupName} setName={setSetupName} workspaceName={workspaceName} setWorkspaceName={setWorkspaceName} busy={busy} onSubmit={handleBootstrap} />;
 
   return (
@@ -660,9 +677,9 @@ function StateScreen({ eyebrow, title, text, extra }) {
   return <div className="state-shell"><div className="state-card"><div className="gradient-pill">{eyebrow}</div><h1>{title}</h1><p>{text}</p>{extra && <div className="state-extra">{extra}</div>}</div></div>;
 }
 
-function AuthScreen({ email, setEmail, sent, busy, onSubmit }) {
+function AuthScreen({ email, setEmail, sent, error, busy, coolingDown, onSubmit }) {
   return (
-    <div className="state-shell"><div className="state-card auth-card"><div className="gradient-pill">GEO PLAYBOOK</div><h1>Ein klarer Schritt nach dem anderen.</h1>{sent ? <p>Wir haben dir einen sicheren Anmeldelink geschickt. Öffne ihn in deinem E-Mail-Postfach, um deinen Tagesplan zu starten.</p> : <><p>Melde dich an, um deinen zentral gespeicherten Tagesplan, Kalender und Content-Workflow zu öffnen.</p><form onSubmit={onSubmit} className="auth-form"><label htmlFor="email">Deine E-Mail-Adresse</label><input id="email" type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="tommy@beispiel.de" required /><button className="primary-button" disabled={busy}>{busy ? "Wird gesendet …" : "Sicheren Link senden"}</button></form></>}</div></div>
+    <div className="state-shell"><div className="state-card auth-card"><div className="gradient-pill">GEO PLAYBOOK</div><h1>Ein klarer Schritt nach dem anderen.</h1>{sent ? <><p>Wir haben dir einen sicheren Anmeldelink geschickt. Öffne ihn in deinem E-Mail-Postfach, um deinen Tagesplan zu starten.</p><div className="auth-hint"><b>Am Handy:</b> Öffne den Link vollständig im Browser. Schließe ihn nicht direkt in der E-Mail-Vorschau.</div></> : <><p>Melde dich an, um deinen zentral gespeicherten Tagesplan, Kalender und Content-Workflow zu öffnen.</p><form onSubmit={onSubmit} className="auth-form"><label htmlFor="email">Deine E-Mail-Adresse</label><input id="email" type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="tommy@beispiel.de" required disabled={coolingDown} /><button className="primary-button" disabled={busy || coolingDown}>{busy ? "Wird gesendet …" : coolingDown ? "Bitte später erneut versuchen" : "Sicheren Link senden"}</button>{error && <p className="auth-error" role="alert">{error}</p>}</form></>}</div></div>
   );
 }
 

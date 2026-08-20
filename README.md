@@ -15,6 +15,7 @@ Die vorhandenen **48 Task-IDs** in `src/data/tasks.js` bleiben vollständig erha
 | **Content** | Briefing und Entwurf mit Status `Idee → Entwurf → Prüfung läuft → Freigegeben → Erledigt`. |
 | **Team** | Einladungen, Rollen, Zuständigkeiten, Vier-Augen-Freigaben und persönlicher Portalstart nach Freigabe. |
 | **Fortschritt** | Tagesfortschritt, Kalenderverlauf, Fundament-Fortschritt und zentraler Aktivitätsverlauf. |
+| **Intelligenz** | ADHS-fokussierte Messbasis, Evidenzgraph, priorisierte Nutzerfragen, Quellenprüfungen und manuelles GEO-Prompt-Monitoring. |
 
 Die zehn täglichen Aktionen liegen als Produktbibliothek in [`src/data/dailyActions.js`](./src/data/dailyActions.js). Sie enthalten bewusst keine Kommentar-, Link-, Kontakt- oder Bewertungsquoten. Externe Chancen werden nur gelb zur Prüfung gezeigt; Quellenarbeit, Nachweise und Messung bleiben der Kern. Plattformkontingente wie maximal eine kostenlose openPR-Meldung pro Monat sind direkt bei den betreffenden Aufgaben hinterlegt. Die Bibliothek kann später erweitert werden, ohne bestehende Task-IDs zu verändern oder zu löschen.
 
@@ -58,6 +59,19 @@ Jede Person arbeitet mit dem **eigenen GEO-Playbook-Konto**, dem eigenen Rechner
 Die Rollen sind bewusst klar getrennt: `Admin` kann Teammitglieder einladen und Aufgaben zuweisen; `Reviewer` und `Admin` dürfen fremde Einreichungen prüfen; `Mitglied` erstellt Entwürfe und dokumentiert die manuelle Ausführung. Eigene externe Maßnahmen können nicht selbst freigegeben werden. Die vier Kriterien **Erlaubt, Relevant, Transparent und Mehrwert** müssen vor einer Freigabe vollständig bestätigt sein.
 
 Für ein **bestehendes** Supabase-Projekt werden die versionierten SQL-Dateien unter [`supabase/migrations`](./supabase/migrations) in Reihenfolge angewendet. Bei einem **neuen** Projekt reicht weiterhin die vollständige Datei [`supabase/schema.sql`](./supabase/schema.sql).
+
+## GEO Intelligence
+
+Die Ansicht **Intelligenz** macht aus dem täglichen Playbook eine ruhige Entscheidungsbasis. Sie zeigt immer zuerst genau eine relevante Lücke: fehlende Messbasis, fällige Quelle, unbelegter Claim, offene Nutzerfrage oder noch nicht geprüfter GEO-Prompt.
+
+| Baustein | Zweck |
+|---|---|
+| **Messbasis** | Echte Ausgangswerte manuell oder als CSV speichern. CSV-Pflichtspalten: `date`, `metric`, `value`. |
+| **Evidenzgraph** | Themen, Nutzerfragen, Claims, Quellen und Content-Abdeckung nachvollziehbar verbinden. |
+| **Priorisierung** | Offene Fragen anhand von Geschäftswert, Sichtbarkeitslücke, Wirkungshinweis, Evidenzlücke und Aufwand sortieren. |
+| **GEO-Monitoring** | Definierte Prompts manuell prüfen und Markenmentionen sowie Domain-Zitationen getrennt dokumentieren. |
+
+Die Google-Integration ist bewusst **read-only** geplant. Sie wird erst aktiviert, wenn ein eigener Google-Cloud-OAuth-Client sowie die explizite Freigabe für Search Console und GA4 vorliegen. Client-Secret und Refresh-Token gehören ausschließlich in geschützte Serverkonfiguration beziehungsweise Vault, nie ins Browser-Frontend. Die Architekturgrundlage und offiziellen Quellen stehen in [`docs/research-datenquellen-geo-intelligence.md`](./docs/research-datenquellen-geo-intelligence.md).
 
 ## Spätere Stufen
 

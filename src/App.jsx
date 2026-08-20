@@ -4,6 +4,8 @@ import { AUTHORITY_PILLARS, DAILY_ACTION_TEMPLATES, RISK_COPY } from "./data/dai
 import { CONTENT_SOP, DAILY_ACTION_GUIDES, PLAYBOOK_STAGES, WEEKLY_REVIEW } from "./data/knowledgeModules";
 import { EXTERNAL_LINK_CHECK, LEGACY_COMPLIANCE_NOTES, RED_GEO_WARNINGS, SIGNAL_CATALOG } from "./data/platformCatalog";
 import { isSupabaseConfigured, supabase } from "./supabase";
+import IntelligenceView from "./IntelligenceView";
+import { loadIntelligenceData } from "./data/intelligenceStore";
 import {
   acceptTeamInvitation,
   assignWorkspaceTask,
@@ -32,6 +34,7 @@ const NAV_ITEMS = [
   { id: "content", label: "Content", number: "3" },
   { id: "team", label: "Team", number: "4" },
   { id: "progress", label: "Fortschritt", number: "5" },
+  { id: "intelligence", label: "Intelligenz", number: "6" },
 ];
 const CONTENT_STATUSES = [
   { id: "idea", label: "Idee" },
@@ -136,6 +139,7 @@ function App() {
   const [dailyActions, setDailyActions] = useState([]);
   const [members, setMembers] = useState([]);
   const [approvals, setApprovals] = useState([]);
+  const [intelligenceData, setIntelligenceData] = useState({ profile: null, topics: [], questions: [], sources: [], claims: [], claimLinks: [], questionLinks: [], metrics: [], monitors: [], snapshots: [] });
   const [activeView, setActiveView] = useState("today");
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [contentReturnView, setContentReturnView] = useState("playbook");
@@ -181,7 +185,10 @@ function App() {
   };
 
   const hydrateWorkspace = async (workspaceData, userId) => {
-    const data = await loadWorkspaceData(workspaceData.id, userId);
+    const [data, intelligence] = await Promise.all([
+      loadWorkspaceData(workspaceData.id, userId),
+      loadIntelligenceData(workspaceData.id),
+    ]);
     const plannedRows = await ensureDailyActions({
       workspaceId: workspaceData.id,
       plannedFor: todayKey,
@@ -197,6 +204,7 @@ function App() {
     setDailyActions(mergeDailyRows(data.dailyActions, plannedRows));
     setMembers(data.members);
     setApprovals(data.approvals);
+    setIntelligenceData(intelligence);
     setProfileName(data.profile.display_name);
     setScreen("app");
   };
@@ -560,6 +568,7 @@ function App() {
         {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView(contentReturnView)} members={members} progress={progress[selectedTask.id]} canAssign={workspace.role === "admin"} onAssign={handleAssignTask} approvals={approvals} userId={session.user.id} canRequestApproval={!LEGACY_COMPLIANCE_NOTES[selectedTask.id]} onSubmitApproval={handleSubmitApproval} onCompleteApproval={handleCompleteApproval} />}
         {activeView === "team" && <TeamView workspace={workspace} profile={profile} members={members} approvals={approvals} inviteForm={inviteForm} setInviteForm={setInviteForm} busy={busy} onInvite={handleInvite} onDecision={handleApprovalDecision} onOpenContent={taskId => openContent(taskId, "team")} />}
         {activeView === "progress" && <><CalendarView dailyActions={dailyActions} todayKey={todayKey} selectedDate={calendarAnchor} onSelectDate={setCalendarAnchor} onPreviousWeek={() => setCalendarAnchor(current => toLocalDate(addDays(dateFromIso(current), -7)))} onNextWeek={() => setCalendarAnchor(current => toLocalDate(addDays(dateFromIso(current), 7)))} onGoToday={() => { setCalendarAnchor(todayKey); setActiveView("today"); }} /><ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} /></>}
+        {activeView === "intelligence" && <IntelligenceView workspace={workspace} data={intelligenceData} onRefresh={refreshWorkspace} />}
       </main>
 
       {toast && <div className="toast" role="status">{toast}</div>}

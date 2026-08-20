@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PLATFORMS } from "./data/tasks";
 import { AUTHORITY_PILLARS, DAILY_ACTION_TEMPLATES, RISK_COPY } from "./data/dailyActions";
 import { CONTENT_SOP, DAILY_ACTION_GUIDES, PLAYBOOK_STAGES, WEEKLY_REVIEW } from "./data/knowledgeModules";
+import { LEGACY_COMPLIANCE_NOTES, RED_GEO_WARNINGS, SIGNAL_CATALOG } from "./data/platformCatalog";
 import { isSupabaseConfigured, supabase } from "./supabase";
 import {
   bootstrapWorkspace,
@@ -516,14 +517,22 @@ function AuthorityView({ pillars, stages, done, progress, onToggle, onOpenConten
       <div className="intro-copy compact"><div className="gradient-pill">DEIN GEO-PLAYBOOK</div><h1>Grundlagen, Plattformen und klare Outreach-Schritte.</h1><p>Hier liegt das Fundament: echte Fachlichkeit, nachvollziehbare Belege und passende Beteiligung – nicht bloß viele Links.</p></div>
       <div className="pillar-grid">{pillars.map(pillar => <article className="pillar-card" key={pillar.title}><span>{pillar.status}</span><h2>{pillar.title}</h2><p>{pillar.text}</p></article>)}</div>
       <KnowledgePath stages={stages} />
+      <SignalCatalog />
       <article className="setup-summary"><div><p className="eyebrow">AUFBAU-PLAYBOOK</p><h2>{setupDoneCount} von {setupTotal} Grundlagen erledigt</h2><p>Die ursprünglichen Aufbauaufgaben bleiben vollständig erhalten und werden separat vom Tagesbetrieb geführt.</p></div><div className="progress-track"><div style={{ width: `${Math.round((setupDoneCount / setupTotal) * 100)}%` }} /></div></article>
       <div className="playbook-grid">{PLATFORMS.map(platform => {
         const platformDone = platform.tasks.filter(task => done[task.id]).length;
         const platformPercentage = Math.round((platformDone / platform.tasks.length) * 100);
-        return <article className="platform-module" key={platform.id}><div className="module-head"><div><p className="eyebrow">{platform.tierLabel}</p><h2>{platform.name}</h2></div><span>{platformPercentage}%</span></div><div className="mini-track"><div style={{ width: `${platformPercentage}%` }} /></div><div className="module-tasks">{platform.tasks.map(task => <div className={`task-item ${done[task.id] ? "done" : ""}`} key={task.id}><button className="task-check" aria-label={`${task.text} ${done[task.id] ? "wieder öffnen" : "erledigen"}`} onClick={() => onToggle(task.id)}>{done[task.id] ? "✓" : ""}</button><button className="task-copy" onClick={() => onOpenContent(task.id)}><span>{task.text}</span><small>{task.when}{progress[task.id]?.completed_at ? ` · ${formatDate(progress[task.id].completed_at)}` : ""}</small></button></div>)}</div><a href={platform.url} target="_blank" rel="noreferrer" className="module-link">Plattform öffnen <span>↗</span></a></article>;
+        return <article className="platform-module" key={platform.id}><div className="module-head"><div><p className="eyebrow">{platform.tierLabel}</p><h2>{platform.name}</h2></div><span>{platformPercentage}%</span></div><div className="mini-track"><div style={{ width: `${platformPercentage}%` }} /></div><div className="module-tasks">{platform.tasks.map(task => {
+          const complianceNote = LEGACY_COMPLIANCE_NOTES[task.id];
+          return <div className={`task-block ${complianceNote ? "legacy-risk" : ""}`} key={task.id}><div className={`task-item ${done[task.id] ? "done" : ""}`}><button className="task-check" aria-label={`${task.text} ${done[task.id] ? "wieder öffnen" : "erledigen"}`} onClick={() => onToggle(task.id)}>{done[task.id] ? "✓" : ""}</button><button className="task-copy" onClick={() => onOpenContent(task.id)}><span>{task.text}</span><small>{task.when}{progress[task.id]?.completed_at ? ` · ${formatDate(progress[task.id].completed_at)}` : ""}</small></button></div>{complianceNote && <p className="legacy-compliance-note"><b>Red GEO · nicht ausführen</b>{complianceNote}</p>}</div>;
+        })}</div><a href={platform.url} target="_blank" rel="noreferrer" className="module-link">Plattform öffnen <span>↗</span></a></article>;
       })}</div>
     </section>
   );
+}
+
+function SignalCatalog() {
+  return <details className="knowledge-card signal-catalog"><summary>Signalquellen & Red GEO <span>Nur bei Bedarf öffnen</span></summary><div className="signal-catalog-body"><p>Der Tagesplan zeigt nur passende Aktionen. Hier siehst du, welche Quellen sich lohnen, welche zuerst geprüft werden müssen und was nicht eingesetzt wird.</p><div className="signal-group-grid">{SIGNAL_CATALOG.map(group => <section className={`signal-group ${group.id}`} key={group.id}><div className="signal-group-head"><b>{group.label}</b><span>{group.summary}</span></div>{group.items.map(item => <article className="signal-source" key={item.title}><div><h3>{item.title}</h3><p>{item.text}</p></div><small>{item.cadence}</small></article>)}</section>)}</div><section className="red-geo-catalog"><div><p className="eyebrow">RED GEO · NICHT AUSFÜHREN</p><h2>Warnwissen statt falscher Abkürzungen.</h2><p>Diese Muster können kurzfristig nach Reichweite aussehen, schaden aber Vertrauen, Plattformkonten oder der langfristigen Sichtbarkeit.</p></div><div className="red-geo-list">{RED_GEO_WARNINGS.map(item => <article key={item.title}><b>{item.title}</b><span>{item.text}</span></article>)}</div></section></div></details>;
 }
 
 function CalendarView({ dailyActions, todayKey, onGoToday }) {

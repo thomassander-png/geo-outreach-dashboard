@@ -320,3 +320,38 @@ a { color: inherit; }
   .content-sop li { grid-template-columns: 1fr; gap: 4px; }
   .knowledge-card summary > span { display: none; }
 }
+
+/* Signalquellen & Red GEO */
+.signal-catalog { background: linear-gradient(135deg, #fcfbff, #f8fffb); }
+.signal-catalog-body { display: grid; gap: 16px; padding: 18px; }
+.signal-catalog-body > p { max-width: 700px; margin: 0; color: #807b8b; font-size: 12px; line-height: 1.55; }
+.signal-group-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.signal-group { overflow: hidden; border-radius: 14px; }
+.signal-group.green { border: 1px solid #d5ecdf; background: #f8fffb; }
+.signal-group.amber { border: 1px solid #f0e0bd; background: #fffdf8; }
+.signal-group-head { display: grid; gap: 3px; padding: 13px 14px; border-bottom: 1px solid rgba(73, 69, 88, .08); }
+.signal-group-head b { color: #39745f; font-size: 11px; }
+.signal-group.amber .signal-group-head b { color: #9a702c; }
+.signal-group-head span { color: #888291; font-size: 10px; line-height: 1.4; }
+.signal-source { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 12px 14px; border-top: 1px solid rgba(73, 69, 88, .07); }
+.signal-source:first-of-type { border-top: 0; }
+.signal-source h3 { margin: 0 0 4px; color: #554f61; font-size: 11px; }
+.signal-source p { margin: 0; color: #817b8b; font-size: 11px; line-height: 1.48; }
+.signal-source small { align-self: start; max-width: 92px; padding: 4px 6px; border-radius: 999px; color: #716a87; background: rgba(255, 255, 255, .72); font-size: 9px; font-weight: 700; line-height: 1.25; text-align: center; }
+.red-geo-catalog { display: grid; grid-template-columns: minmax(190px, .8fr) 1.5fr; gap: 18px; padding: 17px; border: 1px solid #efccca; border-radius: 15px; background: linear-gradient(120deg, #fffafa, #fff5f4); }
+.red-geo-catalog .eyebrow { color: #b35b5c; }
+.red-geo-catalog h2 { margin: 6px 0; color: #7a3e43; font-family: Manrope, sans-serif; font-size: 17px; letter-spacing: -.45px; }
+.red-geo-catalog p:last-child { margin: 0; color: #98686c; font-size: 11px; line-height: 1.5; }
+.red-geo-list { display: grid; gap: 6px; }
+.red-geo-list article { display: grid; gap: 3px; padding: 9px 10px; border-radius: 10px; background: rgba(255, 255, 255, .58); }
+.red-geo-list b { color: #914d53; font-size: 10px; }
+.red-geo-list span { color: #986f72; font-size: 10px; line-height: 1.42; }
+.task-block.legacy-risk { margin: 2px -5px; padding: 4px 5px 6px; border-radius: 9px; background: #fff9f8; }
+.legacy-compliance-note { display: grid; gap: 2px; margin: 1px 0 0 28px; color: #a26467; font-size: 10px; line-height: 1.42; }
+.legacy-compliance-note b { color: #a3484d; font-size: 9px; letter-spacing: .045em; text-transform: uppercase; }
+
+@media (max-width: 760px) {
+  .signal-group-grid, .red-geo-catalog { grid-template-columns: 1fr; }
+  .signal-source { grid-template-columns: 1fr; }
+  .signal-source small { width: fit-content; max-width: none; }
+}

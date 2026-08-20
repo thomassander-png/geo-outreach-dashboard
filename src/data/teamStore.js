@@ -64,17 +64,19 @@ export async function bootstrapWorkspace({ workspaceName, profileName }) {
 
 export async function loadWorkspaceData(workspaceId, userId) {
   const client = requireClient();
-  const [profileResult, progressResult, contentResult, activityResult] = await Promise.all([
+  const [profileResult, progressResult, contentResult, activityResult, dailyActionResult] = await Promise.all([
     client.from("profiles").select("id, display_name, role").eq("id", userId).single(),
     client.from("task_progress").select("task_id, is_done, assigned_to, completed_by, completed_at, note").eq("organization_id", workspaceId),
     client.from("content_items").select("task_id, briefing, draft, status, updated_at").eq("organization_id", workspaceId),
-    client.from("activity_log").select("id, action, task_id, created_at, actor_name").eq("organization_id", workspaceId).order("created_at", { ascending: false }).limit(5),
+    client.from("activity_log").select("id, action, task_id, created_at, actor_name").eq("organization_id", workspaceId).order("created_at", { ascending: false }).limit(12),
+    client.from("daily_action_instances").select("id, template_id, planned_for, status, completed_by, completed_at, note").eq("organization_id", workspaceId).order("planned_for", { ascending: false }),
   ]);
 
   const profile = requireResult(profileResult);
   const progressRows = requireResult(progressResult);
   const contentRows = requireResult(contentResult);
   const activity = requireResult(activityResult);
+  const dailyActions = requireResult(dailyActionResult);
 
   return {
     profile,
@@ -82,7 +84,44 @@ export async function loadWorkspaceData(workspaceId, userId) {
     progress: Object.fromEntries(progressRows.map(row => [row.task_id, row])),
     content: Object.fromEntries(contentRows.map(row => [row.task_id, row])),
     activity,
+    dailyActions,
   };
+}
+
+export async function ensureDailyActions({ workspaceId, plannedFor, templateIds }) {
+  const client = requireClient();
+  const rows = templateIds.map(templateId => ({
+    organization_id: workspaceId,
+    template_id: templateId,
+    planned_for: plannedFor,
+  }));
+
+  requireResult(await client
+    .from("daily_action_instances")
+    .upsert(rows, { onConflict: "organization_id,template_id,planned_for", ignoreDuplicates: true }));
+
+  return requireResult(await client
+    .from("daily_action_instances")
+    .select("id, template_id, planned_for, status, completed_by, completed_at, note")
+    .eq("organization_id", workspaceId)
+    .eq("planned_for", plannedFor)
+    .order("created_at", { ascending: true }));
+}
+
+export async function saveDailyActionStatus({ id, status, actorName }) {
+  const client = requireClient();
+  const completedAt = status === "done" ? new Date().toISOString() : null;
+
+  return requireResult(await client
+    .from("daily_action_instances")
+    .update({
+      status,
+      completed_by: status === "done" ? actorName : null,
+      completed_at: completedAt,
+    })
+    .eq("id", id)
+    .select("id, template_id, planned_for, status, completed_by, completed_at, note")
+    .single());
 }
 
 export async function saveTaskProgress({ workspaceId, taskId, isDone, actorName }) {

@@ -432,7 +432,7 @@ function App() {
           </div>
         </header>
 
-        {activeView === "today" && <TodayView nextAction={nextDailyAction} guide={nextDailyAction ? DAILY_ACTION_GUIDES[nextDailyAction.id] : null} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
+        {activeView === "today" && <TodayView nextAction={nextDailyAction} guide={nextDailyAction ? DAILY_ACTION_GUIDES[nextDailyAction.id] : null} todayQueue={todayQueue} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
         {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} stages={PLAYBOOK_STAGES} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={openContent} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
         {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView("playbook")} />}
         {activeView === "progress" && <><CalendarView dailyActions={dailyActions} todayKey={todayKey} onGoToday={() => setActiveView("today")} /><ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} /></>}
@@ -463,9 +463,10 @@ function OnboardingScreen({ name, setName, workspaceName, setWorkspaceName, busy
   );
 }
 
-function TodayView({ nextAction, guide, todayDoneCount, todaySkippedCount, totalCount, onUpdate, busyId, onShowCalendar, setupDoneCount, setupTotal }) {
+function TodayView({ nextAction, guide, todayQueue, todayDoneCount, todaySkippedCount, totalCount, onUpdate, busyId, onShowCalendar, setupDoneCount, setupTotal }) {
   const statusLabel = nextAction ? RISK_COPY[nextAction.risk] : null;
   const progress = totalCount ? Math.round((todayDoneCount / totalCount) * 100) : 0;
+  const finishedActions = todayQueue.filter(action => action.instance.status === "done" || action.instance.status === "skipped");
 
   return (
     <section className="view-stack">
@@ -490,9 +491,17 @@ function TodayView({ nextAction, guide, todayDoneCount, todaySkippedCount, total
         <article className="small-metric"><strong>{todaySkippedCount}</strong><span>verschoben</span></article>
         <article className="small-metric"><strong>{setupDoneCount}<small> / {setupTotal}</small></strong><span>Aufbau-Schritte</span></article>
       </section>
+      <TodayHistory actions={finishedActions} />
       <section className="week-preview"><div><p className="eyebrow">KALENDER</p><h3>Dein Fortschritt bleibt an jedem Tag sichtbar.</h3><p>Erledigte und verschobene Aktionen werden nicht zurückgesetzt, sondern zentral dokumentiert.</p></div><button className="quiet-button" onClick={onShowCalendar}>Kalender öffnen →</button></section>
     </section>
   );
+}
+
+function TodayHistory({ actions }) {
+  return <section className="today-history"><div><p className="eyebrow">HEUTIGER VERLAUF</p><h3>Was heute erledigt wurde.</h3></div>{actions.length ? <div className="today-history-list">{actions.map(action => {
+    const completed = action.instance.status === "done";
+    return <article className={completed ? "completed" : "skipped"} key={action.instance.id}><span>{completed ? "✓" : "→"}</span><div><b>{action.title}</b><small>{action.category} · {action.platform}{action.instance.completed_at ? ` · ${formatDate(action.instance.completed_at)}` : ""}</small></div><em>{completed ? "Erledigt" : "Verschoben"}</em></article>;
+  })}</div> : <p className="today-history-empty">Sobald du eine Aktion abhakt, steht hier direkt, was erledigt wurde.</p>}</section>;
 }
 
 function ActionGuide({ guide }) {

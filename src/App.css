@@ -198,6 +198,22 @@ a { color: inherit; }
 .risk-chip.green { color: #28775f; border: 1px solid #ccecdf; background: #f3fcf8; }
 .risk-chip.amber { color: #8b6424; border: 1px solid #f0dbaf; background: #fffaf0; }
 .today-metrics { display: grid; grid-template-columns: minmax(250px, 1.65fr) 1fr 1fr; gap: 13px; }
+.today-history { overflow: hidden; border: 1px solid #e8e6ef; border-radius: 18px; background: #fff; }
+.today-history > div:first-child { padding: 17px 19px 10px; }
+.today-history h3 { margin: 5px 0 0; color: #413d4d; font-family: Manrope, sans-serif; font-size: 16px; letter-spacing: -.35px; }
+.today-history-list { display: grid; border-top: 1px solid #efedf3; }
+.today-history-list article { display: grid; grid-template-columns: 25px 1fr auto; align-items: center; gap: 10px; padding: 12px 17px; border-bottom: 1px solid #efedf3; }
+.today-history-list article:last-child { border-bottom: 0; }
+.today-history-list article > span { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 7px; font-size: 11px; font-weight: 800; }
+.today-history-list article.completed > span { color: #fff; background: linear-gradient(135deg, #8e70d8, #59bfad); }
+.today-history-list article.skipped > span { color: #a17024; background: #fff1d6; }
+.today-history-list article > div { display: grid; gap: 3px; }
+.today-history-list b { color: #5d5869; font-size: 12px; }
+.today-history-list small { color: #96919e; font-size: 10px; line-height: 1.35; }
+.today-history-list em { padding: 5px 7px; border-radius: 999px; font-size: 9px; font-style: normal; font-weight: 700; }
+.today-history-list .completed em { color: #2f775f; background: #edf9f3; }
+.today-history-list .skipped em { color: #9a7027; background: #fff5e5; }
+.today-history-empty { margin: 0; padding: 0 19px 17px; color: #918c9a; font-size: 12px; line-height: 1.45; }
 .daily-score-card, .small-metric { min-height: 144px; padding: 21px; border: 1px solid #e9e7ef; border-radius: 18px; background: #fff; }
 .daily-score-card { background: linear-gradient(135deg, #fff, #f9f8ff 65%, #f5fffb); }
 .daily-score-card strong { display: block; margin-top: 9px; color: #2c2a3b; font-family: Manrope, sans-serif; font-size: 35px; letter-spacing: -1.4px; }
@@ -259,6 +275,9 @@ a { color: inherit; }
 
 @media (max-width: 620px) {
   .today-metrics, .pillar-grid, .visibility-grid { grid-template-columns: 1fr; }
+  .today-history-list article { grid-template-columns: 25px 1fr; align-items: start; }
+  .today-history-list article > span { margin-top: 2px; }
+  .today-history-list em { grid-column: 2; width: fit-content; }
   .week-preview, .setup-summary, .visibility-callout { align-items: flex-start; flex-direction: column; gap: 14px; }
   .week-preview .quiet-button, .visibility-callout .primary-button { width: 100%; }
   .setup-summary .progress-track { width: 100%; }

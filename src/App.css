@@ -403,3 +403,77 @@ a { color: inherit; }
   .external-link-check-body { padding: 13px; }
   .external-link-check:not(.interactive) { margin-top: 9px; }
 }
+
+
+/* Team, Freigaben und persönlicher Portalstart */
+.content-status-badge { display: inline-flex; align-items: center; min-height: 29px; padding: 5px 9px; border-radius: 999px; color: #6f67a4; background: #f0edfa; font-size: 10px; font-weight: 800; }
+.content-status-badge.review { color: #9c6d24; background: #fff2d8; }
+.content-status-badge.approved { color: #28745c; background: #eaf8f0; }
+.content-status-badge.done { color: #617480; background: #edf3f5; }
+.team-select, .completion-form input, .approval-row-actions input, .invite-card input { width: 100%; min-height: 43px; border: 1px solid #e1dde8; border-radius: 12px; outline: none; padding: 0 12px; color: #403d4d; background: #fefeff; font-size: 12px; transition: border .18s, box-shadow .18s; }
+.team-select:focus, .completion-form input:focus, .approval-row-actions input:focus, .invite-card input:focus { border-color: #9174dc; box-shadow: 0 0 0 4px rgba(145, 116, 220, .1); }
+.assignment-copy { margin: 0; padding: 10px 11px; border-radius: 10px; color: #756f82; background: #f8f7fb; font-size: 12px; }
+.assignment-copy b { color: #554d65; }
+.approval-request-card, .approval-state-card, .team-focus-card, .team-empty { display: grid; gap: 14px; padding: clamp(21px, 4vw, 31px); border-radius: 20px; }
+.approval-request-card { border: 1px solid #eadbb9; background: linear-gradient(135deg, #fffdf8, #fff8eb); }
+.approval-request-card h2, .approval-state-card h2, .team-focus-card h2, .team-empty h2, .team-card h2, .approval-list h2 { margin: 5px 0; color: #3f3948; font-family: Manrope, sans-serif; font-size: 20px; letter-spacing: -.55px; }
+.approval-request-card > div:first-child > p:last-child, .approval-state-card > p:not(.eyebrow), .team-focus-card > p:not(.eyebrow), .team-empty > p:not(.eyebrow), .team-card > p:not(.eyebrow) { max-width: 690px; margin: 0; color: #7d7786; font-size: 12px; line-height: 1.55; }
+.approval-request-card > label, .completion-form label, .invite-card label { color: #675f70; font-size: 11px; font-weight: 800; }
+.approval-request-card textarea, .completion-form textarea { width: 100%; resize: vertical; border: 1px solid #e6dac1; border-radius: 12px; outline: none; padding: 11px 12px; color: #4d4752; background: rgba(255, 255, 255, .83); font-size: 12px; line-height: 1.5; }
+.approval-request-card textarea:focus, .completion-form textarea:focus { border-color: #ca9d51; box-shadow: 0 0 0 4px rgba(202, 157, 81, .11); }
+.approval-criteria { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.approval-criteria label { display: grid; grid-template-columns: 19px 1fr; gap: 8px; align-items: start; padding: 10px; border: 1px solid #eddfc4; border-radius: 11px; color: #7c7480; background: rgba(255, 255, 255, .72); font-size: 11px; line-height: 1.42; cursor: pointer; }
+.approval-criteria label.checked { border-color: #abd4ba; background: #f2fbf5; }
+.approval-criteria input { width: 15px; height: 15px; margin: 1px 0 0; accent-color: #57b998; }
+.approval-criteria b { display: block; margin-bottom: 2px; color: #5d5544; }
+.approval-footnote { margin: -4px 0 0; color: #9b8154; font-size: 10px; line-height: 1.45; }
+.approval-state-card { border: 1px solid #ebe2ca; background: #fffdf8; }
+.approval-state-card.changes_requested { border-color: #f0d8ad; background: #fff9ee; }
+.approval-state-card.approved { border-color: #cae9da; background: linear-gradient(135deg, #f8fffb, #eefaf4); }
+.approval-state-card.approved .primary-button { width: fit-content; text-decoration: none; }
+.completion-form { display: grid; gap: 8px; max-width: 640px; margin-top: 4px; padding: 16px; border: 1px solid #d7ece0; border-radius: 14px; background: rgba(255, 255, 255, .7); }
+.team-focus-card { border: 1px solid #dcd6ef; background: linear-gradient(125deg, #fbfaff, #f5fffb); }
+.team-grid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 15px; }
+.team-card { padding: 22px; border: 1px solid #e8e5ee; border-radius: 18px; background: #fff; }
+.invite-card { background: linear-gradient(135deg, #fcfbff, #f7fffb); }
+.invite-card form { display: grid; gap: 8px; margin-top: 17px; }
+.member-list { display: grid; gap: 5px; margin-top: 15px; }
+.member-list > div { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #f0eef3; }
+.member-list > div:first-child { border-top: 0; }
+.member-list > div > span { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 10px; color: #fff; background: linear-gradient(135deg, #9a75df, #5dc2ae); font-size: 11px; font-weight: 800; }
+.member-list p { display: grid; gap: 2px; margin: 0; }
+.member-list b { color: #585262; font-size: 12px; }
+.member-list small { color: #9994a2; font-size: 10px; }
+.approval-list { display: grid; gap: 11px; }
+.approval-row { display: grid; gap: 12px; padding: 18px; border: 1px solid #e7e4ed; border-radius: 17px; background: #fff; }
+.approval-row.requested { border-left: 4px solid #d8a656; }
+.approval-row.approved { border-left: 4px solid #63bc99; }
+.approval-row.completed { border-left: 4px solid #869bae; }
+.approval-row.changes_requested { border-left: 4px solid #dba05a; }
+.approval-row-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.approval-row-head h3 { margin: 4px 0; color: #4a4554; font-family: Manrope, sans-serif; font-size: 15px; letter-spacing: -.35px; }
+.approval-row-head p:not(.eyebrow) { margin: 0; color: #938d9c; font-size: 10px; }
+.approval-row-head > span { flex: 0 0 auto; padding: 5px 7px; border-radius: 999px; color: #7764ad; background: #f0edfa; font-size: 9px; font-weight: 800; }
+.approval-row.approved .approval-row-head > span, .approval-row.completed .approval-row-head > span { color: #28755d; background: #eaf8f0; }
+.approval-row.changes_requested .approval-row-head > span { color: #966a28; background: #fff0d4; }
+.criteria-summary { display: flex; flex-wrap: wrap; gap: 6px; }
+.criteria-summary small { padding: 4px 6px; border-radius: 999px; color: #766f80; background: #f7f6fa; font-size: 9px; font-weight: 700; }
+.approval-note { margin: 0; padding: 10px 11px; border-radius: 10px; color: #716b79; background: #faf9fc; font-size: 11px; line-height: 1.48; }
+.approval-note.decision { color: #626c67; background: #f3fbf6; }
+.approval-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.approval-row-actions input { flex: 1 1 220px; }
+.approval-row-actions .primary-button, .approval-row-actions .quiet-button { min-height: 39px; }
+.team-empty { border: 1px dashed #dcd7e5; background: #fff; }
+
+@media (max-width: 760px) {
+  .team-grid, .approval-criteria { grid-template-columns: 1fr; }
+  .approval-row-actions { align-items: stretch; flex-direction: column; }
+  .approval-row-actions > * { width: 100%; }
+}
+
+@media (max-width: 620px) {
+  .approval-request-card, .approval-state-card, .team-focus-card, .team-empty { padding: 20px 17px; border-radius: 17px; }
+  .approval-row-head { align-items: flex-start; flex-direction: column; }
+  .approval-row-head > span { align-self: flex-start; }
+  .approval-state-card.approved .primary-button { width: 100%; }
+}

@@ -12,7 +12,8 @@ Die vorhandenen **48 Task-IDs** in `src/data/tasks.js` bleiben vollständig erha
 |---|---|
 | **Heute** | Genau eine nächste Aktion ist sichtbar. Nach Abschluss rückt die nächste aus dem 10er-Tagesplan nach. |
 | **Playbook** | Die ursprünglichen Aufbauaufgaben, Plattformen und die Ampelprüfung für sichere Outreach-Schritte. |
-| **Content** | Briefing, Entwurf und Status `Idee → Entwurf → Freigabe → Erledigt` pro Aufbauaufgabe. |
+| **Content** | Briefing und Entwurf mit Status `Idee → Entwurf → Prüfung läuft → Freigegeben → Erledigt`. |
+| **Team** | Einladungen, Rollen, Zuständigkeiten, Vier-Augen-Freigaben und persönlicher Portalstart nach Freigabe. |
 | **Fortschritt** | Tagesfortschritt, Kalenderverlauf, Fundament-Fortschritt und zentraler Aktivitätsverlauf. |
 
 Die zehn täglichen Aktionen liegen als Produktbibliothek in [`src/data/dailyActions.js`](./src/data/dailyActions.js). Sie enthalten bewusst keine Kommentar-, Link-, Kontakt- oder Bewertungsquoten. Externe Chancen werden nur gelb zur Prüfung gezeigt; Quellenarbeit, Nachweise und Messung bleiben der Kern. Plattformkontingente wie maximal eine kostenlose openPR-Meldung pro Monat sind direkt bei den betreffenden Aufgaben hinterlegt. Die Bibliothek kann später erweitert werden, ohne bestehende Task-IDs zu verändern oder zu löschen.
@@ -50,6 +51,14 @@ npm run lint
 npm run build
 ```
 
+## Team- und Freigabelogik
+
+Jede Person arbeitet mit dem **eigenen GEO-Playbook-Konto**, dem eigenen Rechner und dem eigenen Browser. Das Playbook speichert **keine Passwörter, Cookies, IP-Adressen oder Zugangstokens** von Drittplattformen. Nach einer dokumentierten Freigabe öffnet der Portal-Button die jeweilige Plattform in einem neuen Tab. Eine bestehende persönliche Browser-Sitzung bleibt dabei beim jeweiligen Nutzer erhalten.
+
+Die Rollen sind bewusst klar getrennt: `Admin` kann Teammitglieder einladen und Aufgaben zuweisen; `Reviewer` und `Admin` dürfen fremde Einreichungen prüfen; `Mitglied` erstellt Entwürfe und dokumentiert die manuelle Ausführung. Eigene externe Maßnahmen können nicht selbst freigegeben werden. Die vier Kriterien **Erlaubt, Relevant, Transparent und Mehrwert** müssen vor einer Freigabe vollständig bestätigt sein.
+
+Für ein **bestehendes** Supabase-Projekt werden die versionierten SQL-Dateien unter [`supabase/migrations`](./supabase/migrations) in Reihenfolge angewendet. Bei einem **neuen** Projekt reicht weiterhin die vollständige Datei [`supabase/schema.sql`](./supabase/schema.sql).
+
 ## Spätere Stufen
 
-Die aktuelle Stufe enthält bewusst keine Mitarbeitereinladungen, Zahlungsabwicklung, KI-Textgenerierung oder automatisches Veröffentlichen auf externen Plattformen. Diese Erweiterungen werden erst nach einer separaten Freigabe ergänzt.
+Die aktuelle Stufe enthält bewusst keine Zahlungsabwicklung, KI-Textgenerierung oder automatisches Veröffentlichen auf externen Plattformen. Diese Erweiterungen werden erst nach einer separaten Freigabe ergänzt.

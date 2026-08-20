@@ -5,7 +5,12 @@ import { CONTENT_SOP, DAILY_ACTION_GUIDES, PLAYBOOK_STAGES, WEEKLY_REVIEW } from
 import { EXTERNAL_LINK_CHECK, LEGACY_COMPLIANCE_NOTES, RED_GEO_WARNINGS, SIGNAL_CATALOG } from "./data/platformCatalog";
 import { isSupabaseConfigured, supabase } from "./supabase";
 import {
+  acceptTeamInvitation,
+  assignWorkspaceTask,
   bootstrapWorkspace,
+  completeApprovedAction,
+  createTeamInvitation,
+  decideApprovalRequest,
   ensureDailyActions,
   getSession,
   getWorkspace,
@@ -15,6 +20,7 @@ import {
   saveDailyActionStatus,
   saveTaskProgress,
   signOut,
+  submitApprovalRequest,
   updateProfileName,
 } from "./data/teamStore";
 import "./App.css";
@@ -24,12 +30,14 @@ const NAV_ITEMS = [
   { id: "today", label: "Heute", number: "1" },
   { id: "playbook", label: "Playbook", number: "2" },
   { id: "content", label: "Content", number: "3" },
-  { id: "progress", label: "Fortschritt", number: "4" },
+  { id: "team", label: "Team", number: "4" },
+  { id: "progress", label: "Fortschritt", number: "5" },
 ];
 const CONTENT_STATUSES = [
   { id: "idea", label: "Idee" },
   { id: "draft", label: "Entwurf" },
-  { id: "approved", label: "Freigabe" },
+  { id: "review", label: "Prüfung läuft" },
+  { id: "approved", label: "Freigegeben" },
   { id: "done", label: "Erledigt" },
 ];
 
@@ -85,6 +93,15 @@ function activityLabel(action, taskId) {
   const taskText = task?.text || dailyAction?.title || "den Arbeitsbereich";
 
   if (action === "workspace_created") return "hat den Playbook-Arbeitsbereich eingerichtet";
+  if (action === "member_invited") return "hat ein Teammitglied eingeladen";
+  if (action === "member_joined") return "ist dem Playbook-Team beigetreten";
+  if (action === "task_assigned") return `hat „${taskText}“ zugewiesen`;
+  if (action === "approval_requested") return `hat „${taskText}“ zur Freigabe eingereicht`;
+  if (action === "approval_approved") return `hat „${taskText}“ freigegeben`;
+  if (action === "approval_changes_requested") return `hat Änderungen zu „${taskText}“ angefordert`;
+  if (action === "approval_declined") return `hat „${taskText}“ nicht freigegeben`;
+  if (action === "approval_completed") return `hat die Ausführung zu „${taskText}“ dokumentiert`;
+  if (action === "approval_expired") return `hatte eine abgelaufene Freigabe zu „${taskText}“`;
   if (action === "task_completed") return `hat „${taskText}“ erledigt`;
   if (action === "task_reopened") return `hat „${taskText}“ wieder geöffnet`;
   if (action === "content_updated") return `hat Content zu „${taskText}“ aktualisiert`;
@@ -101,6 +118,12 @@ function mergeDailyRows(existingRows, incomingRows) {
   return [...rowMap.values()].sort((first, second) => second.planned_for.localeCompare(first.planned_for));
 }
 
+function roleLabel(role) {
+  if (role === "admin") return "Admin";
+  if (role === "reviewer") return "Reviewer";
+  return "Mitglied";
+}
+
 function App() {
   const [screen, setScreen] = useState(isSupabaseConfigured ? "loading" : "configuration");
   const [session, setSession] = useState(null);
@@ -111,6 +134,8 @@ function App() {
   const [contentItems, setContentItems] = useState({});
   const [activity, setActivity] = useState([]);
   const [dailyActions, setDailyActions] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [approvals, setApprovals] = useState([]);
   const [activeView, setActiveView] = useState("today");
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [toast, setToast] = useState("");
@@ -122,6 +147,7 @@ function App() {
   const [workspaceName, setWorkspaceName] = useState("GEO Playbook");
   const [profileName, setProfileName] = useState("");
   const [contentForm, setContentForm] = useState({ briefing: "", draft: "", status: "idea" });
+  const [inviteForm, setInviteForm] = useState({ email: "", displayName: "", role: "member" });
 
   const todayKey = toLocalDate();
   const allTasks = useMemo(() => PLATFORMS.flatMap(platform => platform.tasks.map(task => ({ ...task, platform: platform.name, platformId: platform.id, url: platform.url }))), []);
@@ -167,6 +193,8 @@ function App() {
     setContentItems(data.content);
     setActivity(data.activity);
     setDailyActions(mergeDailyRows(data.dailyActions, plannedRows));
+    setMembers(data.members);
+    setApprovals(data.approvals);
     setProfileName(data.profile.display_name);
     setScreen("app");
   };
@@ -182,8 +210,10 @@ function App() {
     setScreen("loading");
 
     try {
+      const acceptedWorkspaceId = await acceptTeamInvitation();
       const workspaceData = await getWorkspace(currentSession.user.id);
       await hydrateWorkspace(workspaceData, currentSession.user.id);
+      if (acceptedWorkspaceId) showToast("Du bist jetzt im GEO-Playbook-Team.");
     } catch (error) {
       if (error.message?.includes("noch kein Playbook-Arbeitsbereich")) {
         setSetupName(currentSession.user.user_metadata?.display_name || "Tommy");
@@ -365,6 +395,95 @@ function App() {
     }
   };
 
+  const refreshWorkspace = async () => {
+    if (!workspace || !session?.user) return;
+    await hydrateWorkspace(workspace, session.user.id);
+  };
+
+  const handleInvite = async event => {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      await createTeamInvitation({ workspaceId: workspace.id, ...inviteForm });
+      setInviteForm({ email: "", displayName: "", role: "member" });
+      await refreshWorkspace();
+      showToast("Einladung und sicherer Anmeldelink wurden gesendet.");
+    } catch (error) {
+      showToast(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleAssignTask = async (taskId, userId) => {
+    if (!userId) return;
+    setBusy(true);
+    try {
+      await assignWorkspaceTask({ workspaceId: workspace.id, taskId, userId });
+      await refreshWorkspace();
+      showToast("Aufgabe ist klar zugewiesen.");
+    } catch (error) {
+      showToast(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSubmitApproval = async ({ task, criteria, requestNote }) => {
+    setBusy(true);
+    try {
+      await saveContentItem({
+        workspaceId: workspace.id,
+        taskId: task.id,
+        briefing: contentForm.briefing,
+        draft: contentForm.draft,
+        status: "draft",
+      });
+      await submitApprovalRequest({
+        workspaceId: workspace.id,
+        taskId: task.id,
+        platformName: task.platform,
+        platformUrl: task.url,
+        criteria,
+        requestNote,
+        contentSnapshot: contentForm.draft,
+      });
+      await refreshWorkspace();
+      setActiveView("team");
+      showToast("Freigabe angefordert. Die nächste Aktion liegt beim Reviewer.");
+    } catch (error) {
+      showToast(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleApprovalDecision = async (requestId, decision, decisionNote) => {
+    setBusy(true);
+    try {
+      await decideApprovalRequest({ requestId, decision, decisionNote });
+      await refreshWorkspace();
+      showToast(decision === "approved" ? "Freigabe erteilt. Der Portal-Startlink ist nun für die zuständige Person sichtbar." : "Entscheidung ist gespeichert.");
+    } catch (error) {
+      showToast(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleCompleteApproval = async (requestId, publicationUrl, resultNote) => {
+    setBusy(true);
+    try {
+      await completeApprovedAction({ requestId, publicationUrl, resultNote });
+      await refreshWorkspace();
+      showToast("Ausführung und Ergebnis sind zentral dokumentiert.");
+    } catch (error) {
+      showToast(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const saveName = async event => {
     event.preventDefault();
     const nextName = profileName.trim();
@@ -429,13 +548,14 @@ function App() {
           </div>
           <div className="profile-control">
             <div className="avatar">{profile.display_name.slice(0, 1).toUpperCase()}</div>
-            <div><strong>{profile.display_name}</strong><span>{workspace.role === "admin" ? "Admin" : "Mitglied"}</span></div>
+            <div><strong>{profile.display_name}</strong><span>{roleLabel(workspace.role)}</span></div>
           </div>
         </header>
 
         {activeView === "today" && <TodayView nextAction={nextDailyAction} guide={nextDailyAction ? DAILY_ACTION_GUIDES[nextDailyAction.id] : null} todayQueue={todayQueue} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
         {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} stages={PLAYBOOK_STAGES} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={openContent} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
-        {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView("playbook")} />}
+        {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView("playbook")} members={members} progress={progress[selectedTask.id]} canAssign={workspace.role === "admin"} onAssign={handleAssignTask} approvals={approvals} userId={session.user.id} canRequestApproval={!LEGACY_COMPLIANCE_NOTES[selectedTask.id]} onSubmitApproval={handleSubmitApproval} onCompleteApproval={handleCompleteApproval} />}
+        {activeView === "team" && <TeamView workspace={workspace} profile={profile} members={members} approvals={approvals} inviteForm={inviteForm} setInviteForm={setInviteForm} busy={busy} onInvite={handleInvite} onDecision={handleApprovalDecision} onOpenContent={openContent} />}
         {activeView === "progress" && <><CalendarView dailyActions={dailyActions} todayKey={todayKey} onGoToday={() => setActiveView("today")} /><ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} /></>}
       </main>
 
@@ -574,12 +694,64 @@ function CalendarView({ dailyActions, todayKey, onGoToday }) {
   );
 }
 
-function ContentView({ task, form, setForm, busy, onSave, onBack }) {
+function ContentView({ task, form, setForm, busy, onSave, onBack, members, progress, canAssign, onAssign, approvals, userId, canRequestApproval, onSubmitApproval, onCompleteApproval }) {
+  const [criteria, setCriteria] = useState({});
+  const [requestNote, setRequestNote] = useState("");
+  const [resultForm, setResultForm] = useState({ publicationUrl: "", resultNote: "" });
   const status = CONTENT_STATUSES.find(item => item.id === form.status)?.label || "Idee";
+  const activeApproval = approvals.find(item => item.task_id === task.id && item.requested_by === userId && ["requested", "changes_requested", "approved"].includes(item.status));
+  const validApproval = activeApproval?.status === "approved" && activeApproval.expires_at && new Date(activeApproval.expires_at) > new Date();
+  const assignedMember = members.find(member => member.user_id === progress?.assigned_to);
+  const allCriteriaPassed = EXTERNAL_LINK_CHECK.every(item => criteria[item.id]);
+  const contentLocked = Boolean(activeApproval && activeApproval.status !== "changes_requested");
+
+  useEffect(() => {
+    setCriteria({});
+    setRequestNote("");
+    setResultForm({ publicationUrl: "", resultNote: "" });
+  }, [task.id]);
+
   return (
-    <section className="view-stack"><button className="back-button" onClick={onBack}>← Zurück zum Playbook</button><div className="intro-copy compact"><div className="gradient-pill">CONTENT-WORKFLOW · {status.toUpperCase()}</div><h1>{task.text}</h1><p>{task.platform} · {task.when}</p></div><ContentSop /><form className="content-editor" onSubmit={onSave}><div className="editor-head"><div><p className="eyebrow">SCHRITT FÜR SCHRITT</p><h2>Content vorbereiten</h2></div><a href={task.url} target="_blank" rel="noreferrer" className="quiet-button">Plattform öffnen ↗</a></div><label htmlFor="content-status">Status</label><div className="status-options" id="content-status">{CONTENT_STATUSES.map(item => <button type="button" className={form.status === item.id ? "selected" : ""} onClick={() => setForm(current => ({ ...current, status: item.id }))} key={item.id}>{item.label}</button>)}</div><label htmlFor="briefing">Kurzes Briefing</label><textarea id="briefing" value={form.briefing} onChange={event => setForm(current => ({ ...current, briefing: event.target.value }))} placeholder="Wem hilft dieser Beitrag? Was ist die eine klare Aussage?" rows="4" /><label htmlFor="draft">Entwurf</label><textarea id="draft" value={form.draft} onChange={event => setForm(current => ({ ...current, draft: event.target.value }))} placeholder="Entwurf hier festhalten …" rows="10" /><div className="editor-footer"><p>Der Entwurf wird zentral gespeichert. Veröffentlichen bleibt ein eigener, kontrollierter Schritt.</p><button className="primary-button" disabled={busy}>{busy ? "Wird gespeichert …" : "Content speichern"}</button></div></form></section>
+    <section className="view-stack">
+      <button className="back-button" onClick={onBack}>← Zurück zum Playbook</button>
+      <div className="intro-copy compact"><div className="gradient-pill">CONTENT-WORKFLOW · {status.toUpperCase()}</div><h1>{task.text}</h1><p>{task.platform} · {task.when}</p></div>
+      <ContentSop />
+      <form className="content-editor" onSubmit={onSave}>
+        <div className="editor-head"><div><p className="eyebrow">SCHRITT FÜR SCHRITT</p><h2>Content vorbereiten</h2></div><span className={`content-status-badge ${form.status}`}>{status}</span></div>
+        <label htmlFor="content-status">Arbeitsstatus</label>
+        <div className="status-options" id="content-status">{CONTENT_STATUSES.filter(item => ["idea", "draft"].includes(item.id)).map(item => <button type="button" className={form.status === item.id ? "selected" : ""} onClick={() => setForm(current => ({ ...current, status: item.id }))} disabled={contentLocked} key={item.id}>{item.label}</button>)}</div>
+        <label htmlFor="briefing">Kurzes Briefing</label><textarea id="briefing" value={form.briefing} onChange={event => setForm(current => ({ ...current, briefing: event.target.value }))} placeholder="Wem hilft dieser Beitrag? Was ist die eine klare Aussage?" rows="4" disabled={contentLocked} />
+        <label htmlFor="draft">Entwurf</label><textarea id="draft" value={form.draft} onChange={event => setForm(current => ({ ...current, draft: event.target.value }))} placeholder="Entwurf hier festhalten …" rows="10" disabled={contentLocked} />
+        {canAssign && <label htmlFor="task-owner">Zuständig</label>}
+        {canAssign && <select id="task-owner" className="team-select" value={progress?.assigned_to || ""} onChange={event => onAssign(task.id, event.target.value)} disabled={busy || contentLocked}><option value="">Teammitglied auswählen …</option>{members.map(member => <option value={member.user_id} key={member.user_id}>{member.display_name} · {roleLabel(member.role)}</option>)}</select>}
+        {!canAssign && assignedMember && <p className="assignment-copy">Zuständig: <b>{assignedMember.display_name}</b></p>}
+        <div className="editor-footer"><p>{contentLocked ? "Der geprüfte Entwurf ist gesperrt. Für Änderungen muss die Freigabe zuerst zurück in den Entwurf gehen." : "Der Entwurf wird zentral gespeichert. Externe Schritte brauchen zusätzlich eine dokumentierte Freigabe."}</p><button className="primary-button" disabled={busy || contentLocked}>{busy ? "Wird gespeichert …" : "Content speichern"}</button></div>
+      </form>
+      {canRequestApproval && !activeApproval && <section className="approval-request-card"><div><p className="eyebrow">EXTERNE MAẞNAHME</p><h2>Erst prüfen. Dann persönlich im Portal handeln.</h2><p>Wenn alle vier Kriterien klar erfüllt sind, kann ein Reviewer den genauen Entwurf freigeben.</p></div><div className="approval-criteria">{EXTERNAL_LINK_CHECK.map(item => <label className={criteria[item.id] ? "checked" : ""} key={item.id}><input type="checkbox" checked={Boolean(criteria[item.id])} onChange={event => setCriteria(current => ({ ...current, [item.id]: event.target.checked }))} /><span><b>{item.title}</b>{item.text}</span></label>)}</div><label htmlFor="request-note">Hinweis für den Reviewer</label><textarea id="request-note" value={requestNote} onChange={event => setRequestNote(event.target.value)} placeholder="Welchen konkreten Mehrwert bietet der Entwurf hier?" rows="3" /><button className="primary-button" onClick={() => onSubmitApproval({ task, criteria, requestNote })} disabled={busy || !allCriteriaPassed || !form.draft.trim()}>{busy ? "Wird eingereicht …" : "An Reviewer zur Freigabe senden"}</button><p className="approval-footnote">Der Entwurf muss gespeichert sein und alle vier Kriterien müssen klar „Ja“ sein.</p></section>}
+      {activeApproval && !validApproval && <section className={`approval-state-card ${activeApproval.status}`}><p className="eyebrow">FREIGABE-STATUS</p><h2>{activeApproval.status === "requested" ? "Prüfung läuft" : "Änderung nötig"}</h2><p>{activeApproval.decision_note || "Ein Reviewer prüft jetzt Plattform, Kontext und Entwurf. Der Portal-Startlink bleibt bis zur Freigabe gesperrt."}</p><button className="quiet-button" onClick={() => onSave({ preventDefault: () => {} })} disabled={busy}>Entwurf weiter bearbeiten</button></section>}
+      {validApproval && <section className="approval-state-card approved"><p className="eyebrow">FREIGABE BIS {formatDate(activeApproval.expires_at)}</p><h2>Du kannst den freigegebenen Schritt jetzt selbst ausführen.</h2><p>Der Button öffnet <b>{task.platform}</b> in deinem eigenen Browser. Wenn du dort bereits angemeldet bist, bleibt deine persönliche Sitzung erhalten. Das Dashboard speichert keine Portallogins.</p><a href={activeApproval.platform_url || task.url} target="_blank" rel="noreferrer" className="primary-button">{task.platform} in meinem Browser öffnen ↗</a><div className="completion-form"><label htmlFor="publication-url">Öffentliche URL oder Nachweis, falls vorhanden</label><input id="publication-url" value={resultForm.publicationUrl} onChange={event => setResultForm(current => ({ ...current, publicationUrl: event.target.value }))} placeholder="https://…" /><label htmlFor="result-note">Kurzes Ergebnis</label><textarea id="result-note" value={resultForm.resultNote} onChange={event => setResultForm(current => ({ ...current, resultNote: event.target.value }))} placeholder="Was wurde tatsächlich getan?" rows="3" /><button className="quiet-button" onClick={() => onCompleteApproval(activeApproval.id, resultForm.publicationUrl, resultForm.resultNote)} disabled={busy || !resultForm.resultNote.trim()}>Ausführung dokumentieren</button></div></section>}
+    </section>
   );
 }
+
+function ApprovalReviewCard({ approval, requesterName, task, busy, onDecision, onOpenContent }) {
+  const [note, setNote] = useState("");
+  const isDecisionOpen = ["requested", "changes_requested"].includes(approval.status);
+  const criteria = approval.criteria || {};
+
+  return <article className={`approval-row ${approval.status}`}><div className="approval-row-head"><div><p className="eyebrow">{approval.platform_name || task?.platform || "Externe Maßnahme"}</p><h3>{task?.text || approval.task_id}</h3><p>Von <b>{requesterName}</b> · {formatDate(approval.created_at)}</p></div><span>{approval.status === "approved" ? "Freigegeben" : approval.status === "completed" ? "Dokumentiert" : approval.status === "changes_requested" ? "Änderung nötig" : approval.status === "declined" ? "Abgelehnt" : "Prüfen"}</span></div><div className="criteria-summary"><small>Erlaubt: {criteria.allowed ? "Ja" : "Nein"}</small><small>Relevant: {criteria.relevant ? "Ja" : "Nein"}</small><small>Transparent: {criteria.transparent ? "Ja" : "Nein"}</small><small>Mehrwert: {criteria.value ? "Ja" : "Nein"}</small></div>{approval.request_note && <p className="approval-note">{approval.request_note}</p>}{approval.decision_note && <p className="approval-note decision">{approval.decision_note}</p>}<div className="approval-row-actions"><button className="quiet-button" onClick={() => onOpenContent(approval.task_id)}>Entwurf öffnen</button>{isDecisionOpen && <><input value={note} onChange={event => setNote(event.target.value)} placeholder="Kurze Entscheidungsnotiz" /><button className="primary-button" onClick={() => onDecision(approval.id, "approved", note)} disabled={busy}>Freigeben</button><button className="quiet-button" onClick={() => onDecision(approval.id, "changes_requested", note)} disabled={busy}>Änderung anfordern</button></>}</div></article>;
+}
+
+function TeamView({ workspace, profile, members, approvals, inviteForm, setInviteForm, busy, onInvite, onDecision, onOpenContent }) {
+  const canReview = ["admin", "reviewer"].includes(workspace.role);
+  const canInvite = workspace.role === "admin";
+  const memberName = userId => members.find(member => member.user_id === userId)?.display_name || "Teammitglied";
+  const reviewInbox = approvals.filter(item => ["requested", "changes_requested"].includes(item.status) && item.requested_by !== profile.id);
+  const ownOpen = approvals.filter(item => ["requested", "changes_requested", "approved"].includes(item.status) && item.requested_by === profile.id);
+
+  return <section className="view-stack"><div className="intro-copy compact"><div className="gradient-pill">TEAM & FREIGABEN</div><h1>Jeder arbeitet mit dem eigenen Konto. Alles bleibt nachvollziehbar.</h1><p>Das Playbook verwaltet keine Passwörter oder IPs. Es führt euch stattdessen sauber von Entwurf über Freigabe bis zur persönlichen Ausführung im eigenen Browser.</p></div>{canReview && reviewInbox.length > 0 && <article className="team-focus-card"><p className="eyebrow">DEINE NÄCHSTE REVIEW-AKTION</p><h2>{reviewInbox.length} Freigabe{reviewInbox.length === 1 ? "" : "n"} wartet auf dich.</h2><p>Prüfe zuerst den konkreten Mehrwert, die Transparenz und die Plattformregeln. Erst danach wird ein Portal-Startlink sichtbar.</p></article>}{!canReview && ownOpen.length > 0 && <article className="team-focus-card"><p className="eyebrow">DEINE NÄCHSTE TEAM-AKTION</p><h2>{ownOpen[0].status === "approved" ? "Deine Freigabe ist bereit." : "Dein Entwurf wird geprüft."}</h2><p>{ownOpen[0].status === "approved" ? "Öffne den Entwurf. Dort findest du den persönlichen Portal-Startlink und den Abschlussnachweis." : "Du musst gerade nichts nachschieben. Der nächste Schritt liegt beim Reviewer."}</p><button className="quiet-button" onClick={() => onOpenContent(ownOpen[0].task_id)}>Entwurf öffnen</button></article>}{canInvite && <section className="team-grid"><article className="team-card invite-card"><p className="eyebrow">TEAM ERGÄNZEN</p><h2>Einladung sicher versenden</h2><p>Die eingeladene Person erhält einen Magic Link und arbeitet anschließend mit ihrem eigenen Browser und Account.</p><form onSubmit={onInvite}><label htmlFor="invite-name">Name</label><input id="invite-name" value={inviteForm.displayName} onChange={event => setInviteForm(current => ({ ...current, displayName: event.target.value }))} placeholder="Tobias" required /><label htmlFor="invite-email">E-Mail-Adresse</label><input id="invite-email" type="email" value={inviteForm.email} onChange={event => setInviteForm(current => ({ ...current, email: event.target.value }))} placeholder="tobias@beispiel.de" required /><label htmlFor="invite-role">Rolle</label><select id="invite-role" className="team-select" value={inviteForm.role} onChange={event => setInviteForm(current => ({ ...current, role: event.target.value }))}><option value="member">Mitglied · erstellt und führt aus</option><option value="reviewer">Reviewer · prüft fremde Entwürfe</option></select><button className="primary-button" disabled={busy}>{busy ? "Wird gesendet …" : "Sicheren Link senden"}</button></form></article><article className="team-card"><p className="eyebrow">DEIN TEAM</p><h2>{members.length} aktive Personen</h2><div className="member-list">{members.map(member => <div key={member.user_id}><span>{member.display_name.slice(0, 1).toUpperCase()}</span><p><b>{member.display_name}</b><small>{roleLabel(member.role)}</small></p></div>)}</div></article></section>}{approvals.length > 0 && <section className="approval-list"><div><p className="eyebrow">FREIGABEVERLAUF</p><h2>Klare Entscheidungen statt versteckter Schritte.</h2></div>{approvals.map(approval => <ApprovalReviewCard key={approval.id} approval={approval} requesterName={memberName(approval.requested_by)} task={taskById(approval.task_id)} busy={busy} onDecision={onDecision} onOpenContent={onOpenContent} />)}</section>}{approvals.length === 0 && <section className="team-empty"><p className="eyebrow">NOCH KEINE FREIGABEN</p><h2>Das ist gut: Erst entsteht ein echter Entwurf.</h2><p>Sobald eine externe Maßnahme alle vier Kriterien erfüllt, erscheint sie hier transparent zur Prüfung.</p></section>}</section>;
+}
+
 
 function ProgressView({ activity, profileName, setProfileName, busy, onSaveName, onSignOut, todayDoneCount, totalCount, setupDoneCount, setupTotal }) {
   const dailyPercentage = totalCount ? Math.round((todayDoneCount / totalCount) * 100) : 0;

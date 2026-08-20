@@ -20,10 +20,9 @@ import "./App.css";
 const CURRENT_ACTION_SCHEDULES = new Set(["Heute", "Morgen", "Diese Woche"]);
 const NAV_ITEMS = [
   { id: "today", label: "Heute", number: "1" },
-  { id: "authority", label: "Autorität", number: "2" },
-  { id: "visibility", label: "Sichtbarkeit", number: "3" },
-  { id: "calendar", label: "Kalender", number: "4" },
-  { id: "progress", label: "Fortschritt", number: "5" },
+  { id: "playbook", label: "Playbook", number: "2" },
+  { id: "content", label: "Content", number: "3" },
+  { id: "progress", label: "Fortschritt", number: "4" },
 ];
 const CONTENT_STATUSES = [
   { id: "idea", label: "Idee" },
@@ -118,7 +117,7 @@ function App() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginSent, setLoginSent] = useState(false);
   const [setupName, setSetupName] = useState("Tommy");
-  const [workspaceName, setWorkspaceName] = useState("GEO Outreach Playbook");
+  const [workspaceName, setWorkspaceName] = useState("GEO Playbook");
   const [profileName, setProfileName] = useState("");
   const [contentForm, setContentForm] = useState({ briefing: "", draft: "", status: "idea" });
 
@@ -392,7 +391,7 @@ function App() {
   };
 
   if (screen === "configuration") return <ConfigurationScreen />;
-  if (screen === "loading") return <StateScreen eyebrow="GEO OUTREACH PLAYBOOK" title="Dein Arbeitsbereich wird geladen." text="Einen Moment – wir rufen deinen Tagesplan und deinen Fortschritt ab." />;
+  if (screen === "loading") return <StateScreen eyebrow="GEO PLAYBOOK" title="Dein Arbeitsbereich wird geladen." text="Einen Moment – wir rufen deinen Tagesplan und deinen Fortschritt ab." />;
   if (screen === "error") return <StateScreen eyebrow="VERBINDUNG PRÜFEN" title="Der Arbeitsbereich ist gerade nicht erreichbar." text="Bitte prüfe die zentrale Datenbank-Konfiguration und lade die Seite danach neu." />;
   if (screen === "login") return <AuthScreen email={loginEmail} setEmail={setLoginEmail} sent={loginSent} busy={busy} onSubmit={handleLogin} />;
   if (screen === "onboarding") return <OnboardingScreen name={setupName} setName={setSetupName} workspaceName={workspaceName} setWorkspaceName={setWorkspaceName} busy={busy} onSubmit={handleBootstrap} />;
@@ -400,11 +399,11 @@ function App() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <a className="brand" href="#top" aria-label="GEO Outreach Playbook Startseite">
+        <a className="brand" href="#top" aria-label="GEO Playbook Startseite">
           <span className="brand-mark"><span /> <span /> <span /></span>
           <span>GEO <b>TOOL</b></span>
         </a>
-        <div className="sidebar-product">Visibility Playbook</div>
+        <div className="sidebar-product">GEO Playbook</div>
         <nav className="side-nav" aria-label="Playbook Navigation">
           {NAV_ITEMS.map(item => (
             <button className={`nav-item ${activeView === item.id ? "active" : ""}`} key={item.id} onClick={() => setActiveView(item.id)}>
@@ -414,7 +413,7 @@ function App() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <div className="team-chip"><span className="status-dot" /> {workspace.name}</div>
+          <div className="team-chip"><span className="status-dot" /> GEO Playbook</div>
           <div className="team-muted">Ein Team · zentral gespeichert</div>
         </div>
       </aside>
@@ -422,7 +421,7 @@ function App() {
       <main className="main-content" id="top">
         <header className="topbar">
           <div>
-            <p className="eyebrow">GEO VISIBILITY SYSTEM · 10ER-TAGESPLAN</p>
+            <p className="eyebrow">GEO PLAYBOOK · 10ER-TAGESPLAN</p>
             <p className="date-label">{todayLabel}</p>
           </div>
           <div className="profile-control">
@@ -431,12 +430,10 @@ function App() {
           </div>
         </header>
 
-        {activeView === "today" && <TodayView nextAction={nextDailyAction} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("calendar")} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
-        {activeView === "authority" && <AuthorityView pillars={AUTHORITY_PILLARS} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={openContent} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
-        {activeView === "visibility" && <VisibilityView actionTemplates={DAILY_ACTION_TEMPLATES} onGoToday={() => setActiveView("today")} />}
-        {activeView === "calendar" && <CalendarView dailyActions={dailyActions} todayKey={todayKey} onGoToday={() => setActiveView("today")} />}
-        {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView("authority")} />}
-        {activeView === "progress" && <ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
+        {activeView === "today" && <TodayView nextAction={nextDailyAction} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
+        {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={openContent} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
+        {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView("playbook")} />}
+        {activeView === "progress" && <><CalendarView dailyActions={dailyActions} todayKey={todayKey} onGoToday={() => setActiveView("today")} /><ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} /></>}
       </main>
 
       {toast && <div className="toast" role="status">{toast}</div>}
@@ -445,7 +442,7 @@ function App() {
 }
 
 function ConfigurationScreen() {
-  return <StateScreen eyebrow="GEO OUTREACH PLAYBOOK" title="Zentrale Speicherung einrichten" text="Damit Tagesplan, Kalender und Content dauerhaft teamweit gespeichert werden, fehlen die beiden öffentlichen Verbindungswerte der zentralen Datenbank." extra={<code>VITE_SUPABASE_URL · VITE_SUPABASE_ANON_KEY</code>} />;
+  return <StateScreen eyebrow="GEO PLAYBOOK" title="Zentrale Speicherung einrichten" text="Damit Tagesplan, Kalender und Content dauerhaft teamweit gespeichert werden, fehlen die beiden öffentlichen Verbindungswerte der zentralen Datenbank." extra={<code>VITE_SUPABASE_URL · VITE_SUPABASE_ANON_KEY</code>} />;
 }
 
 function StateScreen({ eyebrow, title, text, extra }) {
@@ -454,7 +451,7 @@ function StateScreen({ eyebrow, title, text, extra }) {
 
 function AuthScreen({ email, setEmail, sent, busy, onSubmit }) {
   return (
-    <div className="state-shell"><div className="state-card auth-card"><div className="gradient-pill">GEO OUTREACH PLAYBOOK</div><h1>Ein klarer Schritt nach dem anderen.</h1>{sent ? <p>Wir haben dir einen sicheren Anmeldelink geschickt. Öffne ihn in deinem E-Mail-Postfach, um deinen Tagesplan zu starten.</p> : <><p>Melde dich an, um deinen zentral gespeicherten Tagesplan, Kalender und Content-Workflow zu öffnen.</p><form onSubmit={onSubmit} className="auth-form"><label htmlFor="email">Deine E-Mail-Adresse</label><input id="email" type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="tommy@beispiel.de" required /><button className="primary-button" disabled={busy}>{busy ? "Wird gesendet …" : "Sicheren Link senden"}</button></form></>}</div></div>
+    <div className="state-shell"><div className="state-card auth-card"><div className="gradient-pill">GEO PLAYBOOK</div><h1>Ein klarer Schritt nach dem anderen.</h1>{sent ? <p>Wir haben dir einen sicheren Anmeldelink geschickt. Öffne ihn in deinem E-Mail-Postfach, um deinen Tagesplan zu starten.</p> : <><p>Melde dich an, um deinen zentral gespeicherten Tagesplan, Kalender und Content-Workflow zu öffnen.</p><form onSubmit={onSubmit} className="auth-form"><label htmlFor="email">Deine E-Mail-Adresse</label><input id="email" type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="tommy@beispiel.de" required /><button className="primary-button" disabled={busy}>{busy ? "Wird gesendet …" : "Sicheren Link senden"}</button></form></>}</div></div>
   );
 }
 
@@ -498,7 +495,7 @@ function TodayView({ nextAction, todayDoneCount, todaySkippedCount, totalCount, 
 function AuthorityView({ pillars, done, progress, onToggle, onOpenContent, setupDoneCount, setupTotal }) {
   return (
     <section className="view-stack">
-      <div className="intro-copy compact"><div className="gradient-pill">DEINE GEO-AUTORITÄT</div><h1>Quelle, Thema, Nachweis, Erwähnung.</h1><p>Hier liegt das Fundament: echte Fachlichkeit und nachvollziehbare Belege – nicht bloß viele Links.</p></div>
+      <div className="intro-copy compact"><div className="gradient-pill">DEIN GEO-PLAYBOOK</div><h1>Grundlagen, Plattformen und klare Outreach-Schritte.</h1><p>Hier liegt das Fundament: echte Fachlichkeit, nachvollziehbare Belege und passende Beteiligung – nicht bloß viele Links.</p></div>
       <div className="pillar-grid">{pillars.map(pillar => <article className="pillar-card" key={pillar.title}><span>{pillar.status}</span><h2>{pillar.title}</h2><p>{pillar.text}</p></article>)}</div>
       <article className="setup-summary"><div><p className="eyebrow">AUFBAU-PLAYBOOK</p><h2>{setupDoneCount} von {setupTotal} Grundlagen erledigt</h2><p>Die ursprünglichen Aufbauaufgaben bleiben vollständig erhalten und werden separat vom Tagesbetrieb geführt.</p></div><div className="progress-track"><div style={{ width: `${Math.round((setupDoneCount / setupTotal) * 100)}%` }} /></div></article>
       <div className="playbook-grid">{PLATFORMS.map(platform => {
@@ -506,20 +503,6 @@ function AuthorityView({ pillars, done, progress, onToggle, onOpenContent, setup
         const platformPercentage = Math.round((platformDone / platform.tasks.length) * 100);
         return <article className="platform-module" key={platform.id}><div className="module-head"><div><p className="eyebrow">{platform.tierLabel}</p><h2>{platform.name}</h2></div><span>{platformPercentage}%</span></div><div className="mini-track"><div style={{ width: `${platformPercentage}%` }} /></div><div className="module-tasks">{platform.tasks.map(task => <div className={`task-item ${done[task.id] ? "done" : ""}`} key={task.id}><button className="task-check" aria-label={`${task.text} ${done[task.id] ? "wieder öffnen" : "erledigen"}`} onClick={() => onToggle(task.id)}>{done[task.id] ? "✓" : ""}</button><button className="task-copy" onClick={() => onOpenContent(task.id)}><span>{task.text}</span><small>{task.when}{progress[task.id]?.completed_at ? ` · ${formatDate(progress[task.id].completed_at)}` : ""}</small></button></div>)}</div><a href={platform.url} target="_blank" rel="noreferrer" className="module-link">Plattform öffnen <span>↗</span></a></article>;
       })}</div>
-    </section>
-  );
-}
-
-function VisibilityView({ actionTemplates, onGoToday }) {
-  const greenActions = actionTemplates.filter(action => action.risk === "green");
-  const amberActions = actionTemplates.filter(action => action.risk === "amber");
-
-  return (
-    <section className="view-stack">
-      <div className="intro-copy compact"><div className="gradient-pill">SICHTBARKEIT MIT REGELN</div><h1>Reichweite ist nur wertvoll, wenn sie Vertrauen stärkt.</h1><p>Die Ampel schützt das Playbook vor Spam und zeigt trotzdem klar, welche Art von Sichtbarkeit als Nächstes Sinn ergibt.</p></div>
-      <section className="visibility-grid"><article className="visibility-panel green-panel"><div className="panel-heading"><div><p className="eyebrow">GRÜN · DIREKT</p><h2>Direkt ausführbar</h2></div><span>{greenActions.length}</span></div>{greenActions.map(action => <div className="visibility-row" key={action.id}><b>{action.platform}</b><span>{action.title}</span></div>)}</article><article className="visibility-panel amber-panel"><div className="panel-heading"><div><p className="eyebrow">GELB · PRÜFEN</p><h2>Erst Kontext prüfen</h2></div><span>{amberActions.length}</span></div>{amberActions.map(action => <div className="visibility-row" key={action.id}><b>{action.platform}</b><span>{action.title}</span></div>)}</article></section>
-      <article className="red-warning"><p className="eyebrow">ROT · NICHT ALS PLAYBOOK-SCHRITT</p><h2>Keine Massenlinks. Keine verdeckte Werbung. Keine Fake-Profile.</h2><p>Das System führt nicht zu Umgehungsstrategien. Beiträge müssen echten Mehrwert haben, Plattformregeln einhalten und bei Eigeninteresse transparent bleiben.</p></article>
-      <article className="visibility-callout"><div><p className="eyebrow">DEIN TAGESPLAN</p><h2>Die heutigen Sichtbarkeitschancen sind bereits priorisiert.</h2><p>Du musst nicht entscheiden, wo du anfangen sollst.</p></div><button className="primary-button" onClick={onGoToday}>Zur nächsten Aktion →</button></article>
     </section>
   );
 }
@@ -542,7 +525,7 @@ function CalendarView({ dailyActions, todayKey, onGoToday }) {
 function ContentView({ task, form, setForm, busy, onSave, onBack }) {
   const status = CONTENT_STATUSES.find(item => item.id === form.status)?.label || "Idee";
   return (
-    <section className="view-stack"><button className="back-button" onClick={onBack}>← Zurück zur Autorität</button><div className="intro-copy compact"><div className="gradient-pill">CONTENT-WORKFLOW · {status.toUpperCase()}</div><h1>{task.text}</h1><p>{task.platform} · {task.when}</p></div><form className="content-editor" onSubmit={onSave}><div className="editor-head"><div><p className="eyebrow">SCHRITT FÜR SCHRITT</p><h2>Content vorbereiten</h2></div><a href={task.url} target="_blank" rel="noreferrer" className="quiet-button">Plattform öffnen ↗</a></div><label htmlFor="content-status">Status</label><div className="status-options" id="content-status">{CONTENT_STATUSES.map(item => <button type="button" className={form.status === item.id ? "selected" : ""} onClick={() => setForm(current => ({ ...current, status: item.id }))} key={item.id}>{item.label}</button>)}</div><label htmlFor="briefing">Kurzes Briefing</label><textarea id="briefing" value={form.briefing} onChange={event => setForm(current => ({ ...current, briefing: event.target.value }))} placeholder="Wem hilft dieser Beitrag? Was ist die eine klare Aussage?" rows="4" /><label htmlFor="draft">Entwurf</label><textarea id="draft" value={form.draft} onChange={event => setForm(current => ({ ...current, draft: event.target.value }))} placeholder="Entwurf hier festhalten …" rows="10" /><div className="editor-footer"><p>Der Entwurf wird zentral gespeichert. Veröffentlichen bleibt ein eigener, kontrollierter Schritt.</p><button className="primary-button" disabled={busy}>{busy ? "Wird gespeichert …" : "Content speichern"}</button></div></form></section>
+    <section className="view-stack"><button className="back-button" onClick={onBack}>← Zurück zum Playbook</button><div className="intro-copy compact"><div className="gradient-pill">CONTENT-WORKFLOW · {status.toUpperCase()}</div><h1>{task.text}</h1><p>{task.platform} · {task.when}</p></div><form className="content-editor" onSubmit={onSave}><div className="editor-head"><div><p className="eyebrow">SCHRITT FÜR SCHRITT</p><h2>Content vorbereiten</h2></div><a href={task.url} target="_blank" rel="noreferrer" className="quiet-button">Plattform öffnen ↗</a></div><label htmlFor="content-status">Status</label><div className="status-options" id="content-status">{CONTENT_STATUSES.map(item => <button type="button" className={form.status === item.id ? "selected" : ""} onClick={() => setForm(current => ({ ...current, status: item.id }))} key={item.id}>{item.label}</button>)}</div><label htmlFor="briefing">Kurzes Briefing</label><textarea id="briefing" value={form.briefing} onChange={event => setForm(current => ({ ...current, briefing: event.target.value }))} placeholder="Wem hilft dieser Beitrag? Was ist die eine klare Aussage?" rows="4" /><label htmlFor="draft">Entwurf</label><textarea id="draft" value={form.draft} onChange={event => setForm(current => ({ ...current, draft: event.target.value }))} placeholder="Entwurf hier festhalten …" rows="10" /><div className="editor-footer"><p>Der Entwurf wird zentral gespeichert. Veröffentlichen bleibt ein eigener, kontrollierter Schritt.</p><button className="primary-button" disabled={busy}>{busy ? "Wird gespeichert …" : "Content speichern"}</button></div></form></section>
   );
 }
 

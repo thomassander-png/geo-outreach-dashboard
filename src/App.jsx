@@ -125,16 +125,17 @@ function App() {
 
   const todayKey = toLocalDate();
   const allTasks = useMemo(() => PLATFORMS.flatMap(platform => platform.tasks.map(task => ({ ...task, platform: platform.name, platformId: platform.id, url: platform.url }))), []);
-  const setupDoneCount = allTasks.filter(task => done[task.id]).length;
+  const actionableTasks = useMemo(() => allTasks.filter(task => !LEGACY_COMPLIANCE_NOTES[task.id]), [allTasks]);
+  const setupDoneCount = actionableTasks.filter(task => done[task.id]).length;
 
   const nextSetupTask = useMemo(() => {
     for (const platform of PLATFORMS) {
-      const task = platform.tasks.find(item => !done[item.id] && CURRENT_ACTION_SCHEDULES.has(item.when));
+      const task = platform.tasks.find(item => !LEGACY_COMPLIANCE_NOTES[item.id] && !done[item.id] && CURRENT_ACTION_SCHEDULES.has(item.when));
       if (task) return { ...task, platform: platform.name, platformId: platform.id, url: platform.url };
     }
 
-    return allTasks.find(task => !done[task.id]) || null;
-  }, [allTasks, done]);
+    return actionableTasks.find(task => !done[task.id]) || null;
+  }, [actionableTasks, done]);
 
   const todayInstances = useMemo(() => dailyActions.filter(action => action.planned_for === todayKey), [dailyActions, todayKey]);
   const todayInstanceByTemplate = useMemo(() => new Map(todayInstances.map(action => [action.template_id, action])), [todayInstances]);
@@ -142,7 +143,7 @@ function App() {
   const todayDoneCount = todayQueue.filter(item => item.instance.status === "done").length;
   const todaySkippedCount = todayQueue.filter(item => item.instance.status === "skipped").length;
   const nextDailyAction = todayQueue.find(item => item.instance.status === "planned") || null;
-  const selectedTask = taskById(selectedTaskId) || nextSetupTask || allTasks[0];
+  const selectedTask = taskById(selectedTaskId) || nextSetupTask || actionableTasks[0];
   const selectedContentTaskId = selectedTask?.id;
   const todayLabel = new Intl.DateTimeFormat("de-DE", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
 
@@ -432,10 +433,10 @@ function App() {
           </div>
         </header>
 
-        {activeView === "today" && <TodayView nextAction={nextDailyAction} guide={nextDailyAction ? DAILY_ACTION_GUIDES[nextDailyAction.id] : null} todayQueue={todayQueue} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
-        {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} stages={PLAYBOOK_STAGES} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={openContent} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} />}
+        {activeView === "today" && <TodayView nextAction={nextDailyAction} guide={nextDailyAction ? DAILY_ACTION_GUIDES[nextDailyAction.id] : null} todayQueue={todayQueue} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
+        {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} stages={PLAYBOOK_STAGES} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={openContent} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
         {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView("playbook")} />}
-        {activeView === "progress" && <><CalendarView dailyActions={dailyActions} todayKey={todayKey} onGoToday={() => setActiveView("today")} /><ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={allTasks.length} /></>}
+        {activeView === "progress" && <><CalendarView dailyActions={dailyActions} todayKey={todayKey} onGoToday={() => setActiveView("today")} /><ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} /></>}
       </main>
 
       {toast && <div className="toast" role="status">{toast}</div>}
@@ -529,9 +530,11 @@ function AuthorityView({ pillars, stages, done, progress, onToggle, onOpenConten
       <SignalCatalog />
       <article className="setup-summary"><div><p className="eyebrow">AUFBAU-PLAYBOOK</p><h2>{setupDoneCount} von {setupTotal} Grundlagen erledigt</h2><p>Die ursprünglichen Aufbauaufgaben bleiben vollständig erhalten und werden separat vom Tagesbetrieb geführt.</p></div><div className="progress-track"><div style={{ width: `${Math.round((setupDoneCount / setupTotal) * 100)}%` }} /></div></article>
       <div className="playbook-grid">{PLATFORMS.map(platform => {
-        const platformDone = platform.tasks.filter(task => done[task.id]).length;
-        const platformPercentage = Math.round((platformDone / platform.tasks.length) * 100);
-        return <article className="platform-module" key={platform.id}><div className="module-head"><div><p className="eyebrow">{platform.tierLabel}</p><h2>{platform.name}</h2></div><span>{platformPercentage}%</span></div><div className="mini-track"><div style={{ width: `${platformPercentage}%` }} /></div><div className="module-tasks">{platform.tasks.map(task => {
+        const actionablePlatformTasks = platform.tasks.filter(task => !LEGACY_COMPLIANCE_NOTES[task.id]);
+        const platformDone = actionablePlatformTasks.filter(task => done[task.id]).length;
+        const platformPercentage = actionablePlatformTasks.length ? Math.round((platformDone / actionablePlatformTasks.length) * 100) : 0;
+        const isRedPlatform = actionablePlatformTasks.length === 0;
+        return <article className={`platform-module ${isRedPlatform ? "red-platform" : ""}`} key={platform.id}><div className="module-head"><div><p className="eyebrow">{platform.tierLabel}</p><h2>{platform.name}</h2></div><span>{isRedPlatform ? "Red GEO" : `${platformPercentage}%`}</span></div><div className="mini-track"><div style={{ width: `${platformPercentage}%` }} /></div><div className="module-tasks">{platform.tasks.map(task => {
           const complianceNote = LEGACY_COMPLIANCE_NOTES[task.id];
           return <div className={`task-block ${complianceNote ? "legacy-risk" : ""}`} key={task.id}><div className={`task-item ${done[task.id] ? "done" : ""}`}><button className="task-check" aria-label={complianceNote ? `${task.text} nicht ausführen` : `${task.text} ${done[task.id] ? "wieder öffnen" : "erledigen"}`} onClick={() => onToggle(task.id)} disabled={Boolean(complianceNote)}>{done[task.id] ? "✓" : ""}</button><button className="task-copy" onClick={() => onOpenContent(task.id)} disabled={Boolean(complianceNote)}><span>{task.text}</span><small>{task.when}{progress[task.id]?.completed_at ? ` · ${formatDate(progress[task.id].completed_at)}` : ""}</small></button></div>{complianceNote && <p className="legacy-compliance-note"><b>Red GEO · nicht ausführen</b>{complianceNote}</p>}</div>;
         })}</div><a href={platform.url} target="_blank" rel="noreferrer" className="module-link">Plattform öffnen <span>↗</span></a></article>;

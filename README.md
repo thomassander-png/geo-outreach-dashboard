@@ -1,12 +1,12 @@
 # GEO Playbook
 
-Das **GEO Playbook** ist der tägliche Umsetzungsplan nach dem GEO Tool. Es führt Teams durch klare Outreach-, Content- und Aufbauaufgaben und speichert Fortschritt zentral statt nur in einem Browser.
+Das **GEO Playbook** ist der tägliche Umsetzungsplan nach dem GEO Tool. Es führt Teams durch Quellenarbeit, Content, Aufbauaufgaben und nur bei passendem Anlass durch regelkonforme externe Sichtbarkeit. Fortschritt wird zentral statt nur in einem Browser gespeichert.
 
 > Das System führt nicht zu Link-Spam. Es priorisiert hilfreiche Inhalte, echte Nachweise, kontextgerechte Beteiligung und eine nachvollziehbare Prüfung externer Erwähnungen.
 
 ## Aktueller Funktionsumfang: 10er-Tagesplan
 
-Die vorhandenen **48 Aufbauaufgaben** in `src/data/tasks.js` bleiben vollständig erhalten. Sie bilden das einmalige Fundament. Zusätzlich erzeugt das Playbook pro Arbeitstag eine eigene, zentral gespeicherte Warteschlange aus **zehn wiederkehrenden GEO-Aktionen**.
+Die vorhandenen **48 Task-IDs** in `src/data/tasks.js` bleiben vollständig erhalten. Sie bilden das einmalige Fundament einschließlich sichtbarer **Red-GEO-Warnhinweise** für frühere riskante Aufgaben. Nur regelkonforme Aufgaben zählen zum Fortschritt oder können erledigt werden. Zusätzlich erzeugt das Playbook pro Arbeitstag eine eigene, zentral gespeicherte Warteschlange aus **zehn wiederkehrenden GEO-Aktionen**.
 
 | Bereich | Funktion |
 |---|---|
@@ -15,7 +15,7 @@ Die vorhandenen **48 Aufbauaufgaben** in `src/data/tasks.js` bleiben vollständi
 | **Content** | Briefing, Entwurf und Status `Idee → Entwurf → Freigabe → Erledigt` pro Aufbauaufgabe. |
 | **Fortschritt** | Tagesfortschritt, Kalenderverlauf, Fundament-Fortschritt und zentraler Aktivitätsverlauf. |
 
-Die zehn täglichen Aktionen liegen als Produktbibliothek in [`src/data/dailyActions.js`](./src/data/dailyActions.js). Sie können später erweitert werden, ohne bestehende Task-IDs zu verändern oder zu löschen.
+Die zehn täglichen Aktionen liegen als Produktbibliothek in [`src/data/dailyActions.js`](./src/data/dailyActions.js). Sie enthalten bewusst keine Kommentar-, Link-, Kontakt- oder Bewertungsquoten. Externe Chancen werden nur gelb zur Prüfung gezeigt; Quellenarbeit, Nachweise und Messung bleiben der Kern. Plattformkontingente wie maximal eine kostenlose openPR-Meldung pro Monat sind direkt bei den betreffenden Aufgaben hinterlegt. Die Bibliothek kann später erweitert werden, ohne bestehende Task-IDs zu verändern oder zu löschen.
 
 ## Einmalige zentrale Einrichtung
 

@@ -607,3 +607,16 @@ a { color: inherit; }
   .csv-upload-label { text-align: left; }
   .csv-upload-label input, .csv-upload-label small { max-width: 100%; }
 }
+
+.google-integration-card { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 17px 18px; border: 1px solid #ded8eb; border-radius: 16px; background: linear-gradient(135deg, #fbfaff, #f5f9ff); }
+.google-integration-card > div { display: grid; gap: 4px; }
+.google-integration-card .eyebrow { margin: 0; color: #6f5fb5; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+.google-integration-card h3 { margin: 0; color: #4f485c; font-family: Manrope, sans-serif; font-size: 16px; letter-spacing: -.3px; }
+.google-integration-card p:not(.eyebrow) { margin: 0; max-width: 580px; color: #777080; font-size: 12px; line-height: 1.5; }
+.google-integration-card small { color: #6e9b8a; font-size: 10px; font-weight: 700; }
+.google-integration-card.connected { border-color: #cbe8dc; background: #f3fbf7; }
+.google-integration-card.error { border-color: #f0d3d3; background: #fff8f8; }
+@media (max-width: 620px) {
+  .google-integration-card { align-items: stretch; flex-direction: column; }
+  .google-integration-card .quiet-button { width: 100%; }
+}

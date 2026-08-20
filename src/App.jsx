@@ -139,7 +139,7 @@ function App() {
   const [dailyActions, setDailyActions] = useState([]);
   const [members, setMembers] = useState([]);
   const [approvals, setApprovals] = useState([]);
-  const [intelligenceData, setIntelligenceData] = useState({ profile: null, topics: [], questions: [], sources: [], claims: [], claimLinks: [], questionLinks: [], metrics: [], monitors: [], snapshots: [] });
+  const [intelligenceData, setIntelligenceData] = useState({ profile: null, topics: [], questions: [], sources: [], claims: [], claimLinks: [], questionLinks: [], metrics: [], monitors: [], snapshots: [], googleIntegration: null, googleImportRuns: [] });
   const [activeView, setActiveView] = useState("today");
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [contentReturnView, setContentReturnView] = useState("playbook");

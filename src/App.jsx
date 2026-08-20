@@ -79,7 +79,8 @@ function dailyActionById(templateId) {
 
 function activityLabel(action, taskId) {
   const task = taskById(taskId);
-  const dailyAction = dailyActionById(taskId);
+  const dailyTemplateId = taskId?.startsWith("daily:") ? taskId.split(":").slice(2).join(":") : taskId;
+  const dailyAction = dailyActionById(dailyTemplateId);
   const taskText = task?.text || dailyAction?.title || "den Arbeitsbereich";
 
   if (action === "workspace_created") return "hat den Playbook-Arbeitsbereich eingerichtet";
@@ -269,7 +270,7 @@ function App() {
     } : item));
 
     try {
-      const savedAction = await saveDailyActionStatus({ id: instance.id, status: nextStatus, actorName: profile.display_name });
+      const savedAction = await saveDailyActionStatus({ workspaceId: workspace.id, id: instance.id, status: nextStatus, actorName: profile.display_name });
       setDailyActions(current => current.map(item => item.id === savedAction.id ? savedAction : item));
       const action = nextStatus === "done" ? "daily_action_done" : nextStatus === "skipped" ? "daily_action_skipped" : "daily_action_reopened";
       setActivity(current => [{

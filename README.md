@@ -23,10 +23,11 @@ Die zehn täglichen Aktionen liegen als Produktbibliothek in [`src/data/dailyAct
 
 Für die dauerhafte Speicherung wird ein eigenes Supabase-Projekt benötigt.
 
-1. Führe in einem neuen Projekt zuerst den vollständigen Inhalt von [`supabase/schema.sql`](./supabase/schema.sql) im **SQL Editor** aus.
-2. Führe anschließend jede Datei in [`supabase/migrations`](./supabase/migrations) in alphabetischer Reihenfolge aus. Für das 10er-System ist das aktuell [`20260820_daily_playbook.sql`](./supabase/migrations/20260820_daily_playbook.sql).
-3. Aktiviere die Anmeldung per E-Mail-Link und hinterlege die produktive Playbook-URL als Site-URL sowie als erlaubte Weiterleitung.
-4. Lege die beiden öffentlichen Verbindungswerte lokal und in der Deployment-Umgebung an.
+1. Führe in einem neuen Projekt den vollständigen Inhalt von [`supabase/schema.sql`](./supabase/schema.sql) im **SQL Editor** aus.
+2. Aktiviere die Anmeldung per E-Mail-Link und hinterlege die produktive Playbook-URL als Site-URL sowie als erlaubte Weiterleitung.
+3. Lege die beiden öffentlichen Verbindungswerte lokal und in der Deployment-Umgebung an.
+
+Der 10er-Tagesplan verwendet bewusst die bereits abgesicherte Tabelle `task_progress` mit einem getrennten internen Tagesplan-Namensraum. Dafür ist keine zusätzliche Datenbankmigration notwendig.
 
 ```bash
 VITE_SUPABASE_URL=https://DEIN-PROJEKT.supabase.co

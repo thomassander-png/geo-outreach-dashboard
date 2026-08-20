@@ -22,6 +22,19 @@ function dailyTaskId(templateId, plannedFor) {
   return `${DAILY_PREFIX}${plannedFor}:${templateId}`;
 }
 
+async function loadAllRows(buildQuery) {
+  const pageSize = 500;
+  const rows = [];
+  let from = 0;
+
+  while (true) {
+    const page = requireResult(await buildQuery().range(from, from + pageSize - 1));
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+    from += pageSize;
+  }
+}
+
 function dailyActionFromProgress(row) {
   const [, plannedFor, templateId] = row.task_id.split(":");
   const status = row.is_done ? "done" : row.note === "daily:skipped" ? "skipped" : "planned";
@@ -90,21 +103,18 @@ export async function bootstrapWorkspace({ workspaceName, profileName }) {
 
 export async function loadWorkspaceData(workspaceId, userId) {
   const client = requireClient();
-  const [profileResult, progressResult, contentResult, activityResult, membersResult, approvalsResult] = await Promise.all([
+  const [profileResult, progressRows, contentRows, activityResult, membersResult, approvals] = await Promise.all([
     client.from("profiles").select("id, display_name, role").eq("id", userId).single(),
-    client.from("task_progress").select("task_id, is_done, assigned_to, completed_by, completed_at, note").eq("organization_id", workspaceId),
-    client.from("content_items").select("task_id, briefing, draft, status, updated_at").eq("organization_id", workspaceId),
+    loadAllRows(() => client.from("task_progress").select("task_id, is_done, assigned_to, completed_by, completed_at, note").eq("organization_id", workspaceId).order("task_id")),
+    loadAllRows(() => client.from("content_items").select("task_id, briefing, draft, status, updated_at").eq("organization_id", workspaceId).order("task_id")),
     client.from("activity_log").select("id, action, task_id, created_at, actor_name").eq("organization_id", workspaceId).order("created_at", { ascending: false }).limit(40),
     client.rpc("list_workspace_members", { target_organization_id: workspaceId }),
-    client.from("approval_requests").select("id, task_id, requested_by, reviewer_id, status, platform_name, platform_url, criteria, request_note, content_snapshot, decision_note, approved_at, expires_at, completed_by, completed_at, publication_url, result_note, created_at").eq("organization_id", workspaceId).order("created_at", { ascending: false }),
+    loadAllRows(() => client.from("approval_requests").select("id, task_id, requested_by, reviewer_id, status, platform_name, platform_url, criteria, request_note, content_snapshot, decision_note, approved_at, expires_at, completed_by, completed_at, publication_url, result_note, created_at").eq("organization_id", workspaceId).order("created_at", { ascending: false })),
   ]);
 
   const profile = requireResult(profileResult);
-  const progressRows = requireResult(progressResult);
-  const contentRows = requireResult(contentResult);
   const activityRows = requireResult(activityResult);
   const members = requireResult(membersResult);
-  const approvals = requireResult(approvalsResult);
   const dailyRows = progressRows.filter(row => row.task_id.startsWith(DAILY_PREFIX));
   const activity = activityRows.filter(item => !(item.task_id?.startsWith(DAILY_PREFIX) && item.action === "task_reopened"));
 

@@ -1656,3 +1656,51 @@ create index if not exists report_recipients_organization_active_idx on public.r
 create index if not exists report_delivery_runs_report_created_idx on public.report_delivery_runs (report_id, created_at desc);
 
 commit;
+
+
+-- Technische GEO-Readiness und verifiziertes Zitationsprotokoll (Migration 20260821)
+begin;
+
+create table if not exists public.technical_readiness_checks (
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  check_key text not null,
+  status text not null default 'pending' check (status in ('pending', 'passed', 'blocked', 'review')),
+  note text not null default '',
+  reviewed_at date,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  primary key (organization_id, check_key)
+);
+
+alter table public.prompt_snapshots
+  add column if not exists citation_type text not null default 'none' check (citation_type in ('none', 'brand_mention', 'domain_citation', 'source_citation')),
+  add column if not exists source_checked boolean not null default false,
+  add column if not exists source_relevant boolean,
+  add column if not exists referral_observed boolean not null default false,
+  add column if not exists review_decision text not null default 'not_checked' check (review_decision in ('not_checked', 'confirmed', 'needs_review', 'not_relevant'));
+
+drop trigger if exists technical_readiness_checks_updated_at on public.technical_readiness_checks;
+create trigger technical_readiness_checks_updated_at
+  before update on public.technical_readiness_checks
+  for each row execute procedure public.set_updated_at();
+
+alter table public.technical_readiness_checks enable row level security;
+
+create policy "members can read technical readiness checks"
+on public.technical_readiness_checks for select
+using (public.workspace_member(organization_id));
+
+create policy "members can write technical readiness checks"
+on public.technical_readiness_checks for insert
+with check (public.workspace_member(organization_id));
+
+create policy "members can update technical readiness checks"
+on public.technical_readiness_checks for update
+using (public.workspace_member(organization_id))
+with check (public.workspace_member(organization_id));
+
+create index if not exists technical_readiness_checks_organization_status_idx
+  on public.technical_readiness_checks (organization_id, status, updated_at desc);
+
+commit;

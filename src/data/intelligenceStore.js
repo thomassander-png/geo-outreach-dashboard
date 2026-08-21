@@ -29,7 +29,7 @@ function nullable(value) {
 
 export async function loadIntelligenceData(workspaceId) {
   const client = requireClient();
-  const [profileResult, topics, questions, sources, claims, claimLinks, questionLinks, metrics, monitors, snapshots, googleIntegrationResult, googleImportRuns] = await Promise.all([
+  const [profileResult, topics, questions, sources, claims, claimLinks, questionLinks, metrics, readinessChecks, monitors, snapshots, googleIntegrationResult, googleImportRuns] = await Promise.all([
     client.from("intelligence_profiles").select("organization_id, domain, target_market, target_audience, primary_goal, primary_conversion, measurement_status, baseline_notes, updated_at").eq("organization_id", workspaceId).maybeSingle(),
     loadAllRows(() => client.from("topic_clusters").select("id, name, description, business_weight, status, updated_at, created_at").eq("organization_id", workspaceId).order("business_weight", { ascending: false }).order("created_at")),
     loadAllRows(() => client.from("research_questions").select("id, topic_id, question, search_intent, business_weight, visibility_gap, impact_score, effort_score, risk_level, status, target_url, updated_at, created_at").eq("organization_id", workspaceId).order("created_at")),
@@ -38,8 +38,9 @@ export async function loadIntelligenceData(workspaceId) {
     loadAllRows(() => client.from("claim_source_links").select("claim_id, source_id, relationship")),
     loadAllRows(() => client.from("question_content_links").select("question_id, task_id, target_url, coverage_status")),
     loadAllRows(() => client.from("metric_snapshots").select("id, metric_date, source, metric_type, metric_value, page_url, query_text, country, device, note, created_at").eq("organization_id", workspaceId).order("metric_date", { ascending: false }).order("created_at", { ascending: false })),
+    loadAllRows(() => client.from("technical_readiness_checks").select("organization_id, check_key, status, note, reviewed_at, reviewed_by, updated_at, created_at").eq("organization_id", workspaceId).order("updated_at", { ascending: false })),
     loadAllRows(() => client.from("prompt_monitors").select("id, question_id, prompt_text, system_name, language_code, priority, status, updated_at, created_at").eq("organization_id", workspaceId).order("priority", { ascending: false }).order("created_at")),
-    loadAllRows(() => client.from("prompt_snapshots").select("id, monitor_id, checked_at, answer_summary, brand_mentioned, domain_cited, cited_domains, evidence_url, reviewer_note, created_at").order("checked_at", { ascending: false })),
+    loadAllRows(() => client.from("prompt_snapshots").select("id, monitor_id, checked_at, answer_summary, brand_mentioned, domain_cited, cited_domains, evidence_url, reviewer_note, citation_type, source_checked, source_relevant, referral_observed, review_decision, created_at").order("checked_at", { ascending: false })),
     client.from("google_integrations").select("id, status, gsc_site_url, ga4_property_id, last_synced_at, last_attempted_at, next_scheduled_at, data_freshness, last_error_code, last_error_message, updated_at").eq("organization_id", workspaceId).maybeSingle(),
     loadAllRows(() => client.from("google_import_runs").select("id, integration_id, source, status, period_start, period_end, rows_fetched, metrics_written, error_code, error_message, started_at, finished_at, created_at").eq("organization_id", workspaceId).order("created_at", { ascending: false })),
   ]);
@@ -53,6 +54,7 @@ export async function loadIntelligenceData(workspaceId) {
     claimLinks,
     questionLinks,
     metrics,
+    readinessChecks,
     monitors,
     snapshots,
     googleIntegration: requireResult(googleIntegrationResult),
@@ -189,6 +191,17 @@ export async function saveMetricSnapshots({ workspaceId, metrics }) {
   return requireResult(await client.from("metric_snapshots").insert(rows).select());
 }
 
+export async function saveTechnicalReadinessCheck({ workspaceId, check }) {
+  const client = requireClient();
+  return requireResult(await client.from("technical_readiness_checks").upsert({
+    organization_id: workspaceId,
+    check_key: check.key,
+    status: check.status,
+    note: check.note.trim(),
+    reviewed_at: check.reviewedAt || null,
+  }, { onConflict: "organization_id,check_key" }).select().single());
+}
+
 export async function savePromptMonitor({ workspaceId, monitor }) {
   const client = requireClient();
   const payload = {
@@ -216,5 +229,10 @@ export async function savePromptSnapshot({ monitorId, snapshot }) {
     cited_domains: citedDomains,
     evidence_url: snapshot.evidenceUrl.trim(),
     reviewer_note: snapshot.reviewerNote.trim(),
+    citation_type: snapshot.citationType,
+    source_checked: Boolean(snapshot.sourceChecked),
+    source_relevant: snapshot.sourceChecked ? Boolean(snapshot.sourceRelevant) : null,
+    referral_observed: Boolean(snapshot.referralObserved),
+    review_decision: snapshot.reviewDecision,
   }).select().single());
 }

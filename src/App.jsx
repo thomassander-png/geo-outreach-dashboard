@@ -5,7 +5,9 @@ import { CONTENT_SOP, DAILY_ACTION_GUIDES, PLAYBOOK_STAGES, WEEKLY_REVIEW } from
 import { EXTERNAL_LINK_CHECK, LEGACY_COMPLIANCE_NOTES, RED_GEO_WARNINGS, SIGNAL_CATALOG } from "./data/platformCatalog";
 import { isSupabaseConfigured, supabase } from "./supabase";
 import IntelligenceView from "./IntelligenceView";
+import PremiumReportView from "./PremiumReportView";
 import { loadIntelligenceData } from "./data/intelligenceStore";
+import { loadReportingData } from "./data/reportingStore";
 import {
   acceptTeamInvitation,
   assignWorkspaceTask,
@@ -35,6 +37,7 @@ const NAV_ITEMS = [
   { id: "team", label: "Team", number: "4" },
   { id: "progress", label: "Fortschritt", number: "5" },
   { id: "intelligence", label: "Intelligenz", number: "6" },
+  { id: "reports", label: "Reports", number: "7" },
 ];
 const CONTENT_STATUSES = [
   { id: "idea", label: "Idee" },
@@ -187,6 +190,7 @@ function App() {
   const [members, setMembers] = useState([]);
   const [approvals, setApprovals] = useState([]);
   const [intelligenceData, setIntelligenceData] = useState({ profile: null, topics: [], questions: [], sources: [], claims: [], claimLinks: [], questionLinks: [], metrics: [], monitors: [], snapshots: [], googleIntegration: null, googleImportRuns: [] });
+  const [reportingData, setReportingData] = useState({ profile: null, kpis: [], reports: [], insights: [], recipients: [] });
   const [activeView, setActiveView] = useState("today");
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [contentReturnView, setContentReturnView] = useState("playbook");
@@ -251,9 +255,10 @@ function App() {
   };
 
   const hydrateWorkspace = async (workspaceData, userId) => {
-    const [data, intelligence] = await Promise.all([
+    const [data, intelligence, reporting] = await Promise.all([
       loadWorkspaceData(workspaceData.id, userId),
       loadIntelligenceData(workspaceData.id),
+      loadReportingData(workspaceData.id),
     ]);
     const plannedRows = await ensureDailyActions({
       workspaceId: workspaceData.id,
@@ -271,6 +276,7 @@ function App() {
     setMembers(data.members);
     setApprovals(data.approvals);
     setIntelligenceData(intelligence);
+    setReportingData(reporting);
     setProfileName(data.profile.display_name);
     setScreen("app");
   };
@@ -661,6 +667,7 @@ function App() {
         {activeView === "team" && <TeamView workspace={workspace} profile={profile} members={members} approvals={approvals} inviteForm={inviteForm} setInviteForm={setInviteForm} busy={busy} onInvite={handleInvite} onDecision={handleApprovalDecision} onOpenContent={taskId => openContent(taskId, "team")} />}
         {activeView === "progress" && <><CalendarView dailyActions={dailyActions} todayKey={todayKey} selectedDate={calendarAnchor} onSelectDate={setCalendarAnchor} onPreviousWeek={() => setCalendarAnchor(current => toLocalDate(addDays(dateFromIso(current), -7)))} onNextWeek={() => setCalendarAnchor(current => toLocalDate(addDays(dateFromIso(current), 7)))} onGoToday={() => { setCalendarAnchor(todayKey); setActiveView("today"); }} /><ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} /></>}
         {activeView === "intelligence" && <IntelligenceView workspace={workspace} data={intelligenceData} onRefresh={refreshWorkspace} />}
+        {activeView === "reports" && <PremiumReportView workspace={workspace} intelligence={intelligenceData} reportData={reportingData} onRefresh={refreshWorkspace} onOpenIntelligence={() => setActiveView("intelligence")} />}
       </main>
 
       {celebration && <div className="reward-celebration" role="status" aria-live="polite"><div className="reward-sparkles" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map(item => <i key={item} />)}</div><p>ABSCHLUSS GESPEICHERT</p><strong>{celebration.title}</strong><span>{celebration.detail}</span></div>}

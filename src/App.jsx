@@ -661,7 +661,7 @@ function App() {
           </div>
         </header>
 
-        {activeView === "today" && <TodayView nextAction={nextDailyAction} guide={nextDailyAction ? DAILY_ACTION_GUIDES[nextDailyAction.id] : null} todayQueue={todayQueue} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
+        {activeView === "today" && <TodayView nextAction={nextDailyAction} todayQueue={todayQueue} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
         {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} stages={PLAYBOOK_STAGES} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={taskId => openContent(taskId, "playbook")} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
         {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView(contentReturnView)} members={members} progress={progress[selectedTask.id]} canAssign={workspace.role === "admin"} onAssign={handleAssignTask} approvals={approvals} userId={session.user.id} canRequestApproval={!LEGACY_COMPLIANCE_NOTES[selectedTask.id]} onSubmitApproval={handleSubmitApproval} onCompleteApproval={handleCompleteApproval} />}
         {activeView === "team" && <TeamView workspace={workspace} profile={profile} members={members} approvals={approvals} inviteForm={inviteForm} setInviteForm={setInviteForm} busy={busy} onInvite={handleInvite} onDecision={handleApprovalDecision} onOpenContent={taskId => openContent(taskId, "team")} />}
@@ -696,44 +696,70 @@ function OnboardingScreen({ name, setName, workspaceName, setWorkspaceName, busy
   );
 }
 
-function TodayView({ nextAction, guide, todayQueue, todayDoneCount, todaySkippedCount, totalCount, onUpdate, busyId, onShowCalendar, setupDoneCount, setupTotal }) {
+function TodayView({ nextAction, todayQueue, todayDoneCount, todaySkippedCount, totalCount, onUpdate, busyId, onShowCalendar, setupDoneCount, setupTotal }) {
   const [externalChecks, setExternalChecks] = useState({});
-  const statusLabel = nextAction ? RISK_COPY[nextAction.risk] : null;
+  const [externalReason, setExternalReason] = useState(false);
+  const [selectedMode, setSelectedMode] = useState("source");
   const progress = totalCount ? Math.round((todayDoneCount / totalCount) * 100) : 0;
   const finishedActions = todayQueue.filter(action => action.instance.status === "done" || action.instance.status === "skipped");
-  const needsExternalCheck = nextAction?.risk === "amber";
+  const openActions = todayQueue.filter(action => action.instance.status === "planned");
+  const sourceAction = openActions.find(action => action.risk === "green" && ["Eigene Quelle", "Themenautorität"].includes(action.category));
+  const learningAction = openActions.find(action => action.risk === "green" && ["Fragen-Recherche", "Messung"].includes(action.category));
+  const externalAction = openActions.find(action => action.risk === "amber");
+  const modes = [
+    { id: "source", number: "1", label: "Eigene Quelle stärken", text: "Eine Antwort, einen Fakt oder einen echten Nachweis auf geo-tool.com verbessern.", action: sourceAction },
+    { id: "learn", number: "2", label: "Signal festhalten", text: "Eine echte Frage, Erkenntnis oder Wirkung kurz dokumentieren.", action: learningAction },
+    { id: "external", number: "+1", label: "Extern nur bei Anlass", text: "Nur bei echter Frage, Neuigkeit oder nachweisbarem Mehrwert prüfen.", action: externalAction, optional: true },
+  ];
+  const selectedEntry = modes.find(mode => mode.id === selectedMode) || modes[0];
+  const currentAction = selectedEntry.action || sourceAction || learningAction || externalAction || nextAction;
+  const currentGuide = currentAction ? DAILY_ACTION_GUIDES[currentAction.id] : null;
+  const statusLabel = currentAction ? RISK_COPY[currentAction.risk] : null;
+  const needsExternalCheck = currentAction?.risk === "amber";
   const allExternalChecksPassed = EXTERNAL_LINK_CHECK.every(item => externalChecks[item.id]);
+  const externalReady = externalReason && allExternalChecksPassed;
+  const firstAvailableMode = sourceAction ? "source" : learningAction ? "learn" : externalAction ? "external" : null;
+
+  useEffect(() => {
+    if (!selectedEntry.action && firstAvailableMode) setSelectedMode(firstAvailableMode);
+  }, [selectedEntry.action, firstAvailableMode]);
 
   useEffect(() => {
     setExternalChecks({});
-  }, [nextAction?.instance.id]);
+    setExternalReason(false);
+  }, [currentAction?.instance.id]);
 
   return (
     <section className="view-stack">
-      <div className="intro-copy"><div className="gradient-pill">DEIN HEUTIGER FOKUS</div><h1>Was ist jetzt der nächste gute GEO-Schritt?</h1><p>Dein Tagesplan hat zehn kleine Aktionen. Du siehst immer nur die nächste – danach rückt die Warteschlange weiter.</p></div>
-      {nextAction ? (
+      <div className="intro-copy"><div className="gradient-pill">DEIN EINFACHER ARBEITSMODUS</div><h1>Erst die eigene Quelle. Dann lernen. Extern nur bei Anlass.</h1><p>Du musst heute nicht überall posten. Zwei kleine interne Schritte reichen. Eine externe Chance ist immer freiwillig und nur bei echtem Mehrwert sinnvoll.</p></div>
+      <section className="work-mode" aria-label="2 plus 1 Arbeitsmodus">
+        <div className="work-mode-head"><div><p className="eyebrow">2 + 1 · KLARER TAGESABLAUF</p><h2>Wähle nur den Schritt, der jetzt dran ist.</h2></div><span>Keine Posting-Quote</span></div>
+        <div className="work-mode-grid">{modes.map(mode => <button type="button" className={`work-mode-step ${selectedMode === mode.id ? "active" : ""} ${mode.optional ? "optional" : ""}`} onClick={() => setSelectedMode(mode.id)} key={mode.id}><b>{mode.number}</b><div><strong>{mode.label}</strong><span>{mode.action ? mode.action.title : mode.optional ? "Nur öffnen, wenn es heute wirklich einen Anlass gibt." : "Für heute bereits erledigt."}</span></div><em>{mode.optional ? "Optional" : mode.action ? "Jetzt" : "Fertig"}</em></button>)}</div>
+      </section>
+      {currentAction ? (
         <article className="focus-card daily-focus-card">
           <div className="focus-orb" />
           <div className="focus-content">
-            <p className="eyebrow">{nextAction.category} · {nextAction.platform}</p>
-            <h2>{nextAction.title}</h2>
-            <p className="focus-meta">{nextAction.detail}</p>
-            <div className={`risk-chip ${nextAction.risk}`}><b>{statusLabel.label}</b><span>{statusLabel.text}</span></div>
-            {guide && <ActionGuide guide={guide} />}
-            {needsExternalCheck && <ExternalLinkCheck platform={nextAction.platform} interactive checks={externalChecks} onChange={setExternalChecks} allPassed={allExternalChecksPassed} />}
-            <div className="focus-actions"><button className="primary-button" onClick={() => onUpdate(nextAction.instance, "done")} disabled={busyId === nextAction.instance.id || (needsExternalCheck && !allExternalChecksPassed)}>{busyId === nextAction.instance.id ? "Wird gespeichert …" : needsExternalCheck && !allExternalChecksPassed ? "Erst 4 Kriterien bestätigen" : "Als erledigt markieren"}</button><button className="quiet-button" onClick={() => onUpdate(nextAction.instance, "skipped")} disabled={busyId === nextAction.instance.id}>Heute verschieben</button></div>
+            <p className="eyebrow">{selectedEntry.label} · {currentAction.platform}</p>
+            <h2>{currentAction.title}</h2>
+            <p className="focus-meta">{currentAction.detail}</p>
+            <div className={`risk-chip ${currentAction.risk}`}><b>{statusLabel.label}</b><span>{statusLabel.text}</span></div>
+            {needsExternalCheck && <section className="posting-gate"><p className="eyebrow">VOR EINER EXTERNEN BETEILIGUNG</p><h3>Es gibt heute wirklich einen Anlass.</h3><label className={externalReason ? "checked" : ""}><input type="checkbox" checked={externalReason} onChange={event => setExternalReason(event.target.checked)} /><span><b>Echter Anlass vorhanden</b>Eine konkrete Frage, eine unabhängige Neuigkeit oder ein echter Nutzen für diese Community liegt vor.</span></label><p>Wenn nein: Nicht posten. Nimm die Frage als Idee für geo-tool.com mit.</p></section>}
+            {currentGuide && <ActionGuide guide={currentGuide} />}
+            {needsExternalCheck && <ExternalLinkCheck platform={currentAction.platform} interactive checks={externalChecks} onChange={setExternalChecks} allPassed={externalReady} />}
+            <div className="focus-actions"><button className="primary-button" onClick={() => onUpdate(currentAction.instance, "done")} disabled={busyId === currentAction.instance.id || (needsExternalCheck && !externalReady)}>{busyId === currentAction.instance.id ? "Wird gespeichert …" : needsExternalCheck && !externalReady ? "Erst Anlass + 4 Kriterien prüfen" : needsExternalCheck ? "Beteiligung dokumentieren" : "Schritt speichern"}</button><button className="quiet-button" onClick={() => onUpdate(currentAction.instance, "skipped")} disabled={busyId === currentAction.instance.id}>Heute verschieben</button></div>
           </div>
         </article>
       ) : (
-        <article className="focus-card completed-focus"><div className="focus-content"><p className="eyebrow">HEUTE ABGESCHLOSSEN</p><h2>Dein Tagesplan ist sauber erledigt.</h2><p className="focus-meta">Die Ergebnisse bleiben im Kalender sichtbar. Morgen startet ein neuer, klarer 10er-Plan.</p></div></article>
+        <article className="focus-card completed-focus"><div className="focus-content"><p className="eyebrow">HEUTE AUSREICHEND ERLEDIGT</p><h2>Deine offenen Schritte sind sauber dokumentiert.</h2><p className="focus-meta">Kein Nacharbeiten aus Pflichtgefühl: Ergebnisse bleiben im Kalender. Morgen wählst du wieder nur den nächsten sinnvollen Schritt.</p></div></article>
       )}
       <section className="today-metrics">
-        <article className="daily-score-card"><p className="eyebrow">HEUTE</p><strong>{todayDoneCount} <span>/ {totalCount}</span></strong><p>erledigte Aktionen</p><div className="progress-track"><div style={{ width: `${progress}%` }} /></div></article>
-        <article className="small-metric"><strong>{todaySkippedCount}</strong><span>verschoben</span></article>
+        <article className="daily-score-card"><p className="eyebrow">HEUTE</p><strong>{todayDoneCount} <span>/ {totalCount}</span></strong><p>dokumentierte Mini-Schritte</p><div className="progress-track"><div style={{ width: `${progress}%` }} /></div></article>
+        <article className="small-metric"><strong>{todaySkippedCount}</strong><span>bewusst verschoben</span></article>
         <article className="small-metric"><strong>{setupDoneCount}<small> / {setupTotal}</small></strong><span>Aufbau-Schritte</span></article>
       </section>
       <TodayHistory actions={finishedActions} />
-      <section className="week-preview"><div><p className="eyebrow">KALENDER</p><h3>Dein Fortschritt bleibt an jedem Tag sichtbar.</h3><p>Erledigte und verschobene Aktionen werden nicht zurückgesetzt, sondern zentral dokumentiert.</p></div><button className="quiet-button" onClick={onShowCalendar}>Kalender öffnen →</button></section>
+      <section className="week-preview"><div><p className="eyebrow">MERKSATZ</p><h3>Kein Anlass? Kein externer Post.</h3><p>Nutze die Plattformübersicht als Nachschlagewerk. Extern handelst du nur mit echter Frage, transparentem Mehrwert und einer klaren grünen Prüfung.</p></div><button className="quiet-button" onClick={onShowCalendar}>Kalender öffnen →</button></section>
     </section>
   );
 }

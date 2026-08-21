@@ -132,22 +132,33 @@ export async function loadWorkspaceData(workspaceId, userId) {
 
 export async function ensureDailyActions({ workspaceId, plannedFor, templateIds }) {
   const client = requireClient();
-  const rows = templateIds.map(templateId => ({
+  const expectedRows = templateIds.map(templateId => ({
     organization_id: workspaceId,
     task_id: dailyTaskId(templateId, plannedFor),
     is_done: false,
     note: "daily:planned",
   }));
-
-  requireResult(await client
-    .from("task_progress")
-    .upsert(rows, { onConflict: "organization_id,task_id", ignoreDuplicates: true }));
-
-  const savedRows = requireResult(await client
+  const taskPattern = `${DAILY_PREFIX}${plannedFor}:%`;
+  const existingRows = requireResult(await client
     .from("task_progress")
     .select("task_id, is_done, completed_by, completed_at, note")
     .eq("organization_id", workspaceId)
-    .like("task_id", `${DAILY_PREFIX}${plannedFor}:%`));
+    .like("task_id", taskPattern));
+  const existingIds = new Set(existingRows.map(row => row.task_id));
+  const missingRows = expectedRows.filter(row => !existingIds.has(row.task_id));
+
+  if (missingRows.length) {
+    const insertResult = await client.from("task_progress").insert(missingRows);
+    if (insertResult.error && insertResult.error.code !== "23505") throw insertResult.error;
+  }
+
+  const savedRows = missingRows.length
+    ? requireResult(await client
+      .from("task_progress")
+      .select("task_id, is_done, completed_by, completed_at, note")
+      .eq("organization_id", workspaceId)
+      .like("task_id", taskPattern))
+    : existingRows;
 
   return savedRows.map(dailyActionFromProgress);
 }
@@ -174,17 +185,43 @@ export async function saveDailyActionStatus({ workspaceId, id, status, actorName
 
 export async function saveTaskProgress({ workspaceId, taskId, isDone, actorName }) {
   const client = requireClient();
-  const completedAt = isDone ? new Date().toISOString() : null;
+  const progress = {
+    is_done: isDone,
+    completed_by: isDone ? actorName : null,
+    completed_at: isDone ? new Date().toISOString() : null,
+  };
+  const existing = requireResult(await client
+    .from("task_progress")
+    .select("task_id")
+    .eq("organization_id", workspaceId)
+    .eq("task_id", taskId)
+    .maybeSingle());
+
+  if (existing) {
+    return requireResult(await client
+      .from("task_progress")
+      .update(progress)
+      .eq("organization_id", workspaceId)
+      .eq("task_id", taskId)
+      .select()
+      .single());
+  }
+
+  const insertResult = await client
+    .from("task_progress")
+    .insert({ organization_id: workspaceId, task_id: taskId, ...progress })
+    .select()
+    .single();
+
+  if (!insertResult.error || insertResult.error.code !== "23505") return requireResult(insertResult);
 
   return requireResult(await client
     .from("task_progress")
-    .upsert({
-      organization_id: workspaceId,
-      task_id: taskId,
-      is_done: isDone,
-      completed_by: isDone ? actorName : null,
-      completed_at: completedAt,
-    }, { onConflict: "organization_id,task_id" }));
+    .update(progress)
+    .eq("organization_id", workspaceId)
+    .eq("task_id", taskId)
+    .select()
+    .single());
 }
 
 export async function assignWorkspaceTask({ workspaceId, taskId, userId }) {

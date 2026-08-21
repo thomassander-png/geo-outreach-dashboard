@@ -625,7 +625,7 @@ a { color: inherit; }
 .sound-toggle { min-height: 32px; padding: 0 10px; border: 1px solid #e2dfea; border-radius: 999px; color: #726d7f; background: #fff; font-size: 10px; font-weight: 700; transition: border-color .18s ease, color .18s ease, background .18s ease; }
 .sound-toggle[aria-pressed="true"] { border-color: #bfb4df; color: #6253a2; background: #f7f4ff; }
 .reward-celebration { --reward-x: -50%; position: fixed; isolation: isolate; z-index: 30; top: 94px; left: calc(50% + 125px); display: grid; grid-template-columns: 48px minmax(0, 1fr) 120px; align-items: center; width: min(780px, calc(100vw - 330px)); gap: 15px; overflow: hidden; padding: 15px 20px; border: 1px solid rgba(134, 106, 209, .38); border-radius: 18px; color: #454052; background: linear-gradient(106deg, rgba(255, 255, 255, .99), rgba(246, 242, 255, .98) 50%, rgba(238, 253, 247, .98)); box-shadow: 0 18px 52px rgba(75, 61, 109, .22), 0 0 0 5px rgba(168, 126, 233, .06); animation: reward-card-in .5s cubic-bezier(.23, 1, .32, 1) both; }
-.reward-celebration::before { position: absolute; z-index: 0; top: -40%; bottom: -40%; left: -48%; width: 44%; background: linear-gradient(90deg, transparent 0%, rgba(108, 204, 187, .08) 18%, rgba(183, 222, 117, .68) 42%, rgba(130, 105, 210, .9) 56%, rgba(94, 204, 181, .54) 72%, transparent 100%); box-shadow: 0 0 30px rgba(105, 179, 202, .28); content: ""; opacity: 0; transform: skewX(-18deg) translateX(0); animation: reward-sweep 1.75s cubic-bezier(.2, .84, .26, 1) .1s both; }
+.reward-celebration::before { position: absolute; z-index: 0; top: -40%; bottom: -40%; left: -48%; width: 44%; background: linear-gradient(90deg, transparent 0%, rgba(108, 204, 187, .08) 18%, rgba(183, 222, 117, .68) 42%, rgba(130, 105, 210, .9) 56%, rgba(94, 204, 181, .54) 72%, transparent 100%); box-shadow: 0 0 30px rgba(105, 179, 202, .28); content: ""; opacity: 0; transform: skewX(-18deg) translateX(0); animation: reward-sweep 2.55s cubic-bezier(.45, 0, .55, 1) .14s both; }
 .reward-celebration::after { position: absolute; z-index: 0; right: -40px; bottom: -55px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(173, 222, 115, .52), rgba(81, 199, 176, .12) 58%, transparent 66%); content: ""; }
 .reward-seal { position: relative; z-index: 1; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, #8c69d5, #54c8ae); box-shadow: 0 10px 22px rgba(107, 83, 173, .28); font-family: Manrope, sans-serif; font-size: 28px; font-weight: 800; line-height: 1; }
 .reward-copy { position: relative; z-index: 1; display: grid; gap: 2px; min-width: 0; }
@@ -634,7 +634,7 @@ a { color: inherit; }
 .reward-copy span { color: #807b8a; font-size: 11px; line-height: 1.42; }
 .reward-forward { position: relative; z-index: 1; display: grid; justify-items: end; gap: 5px; color: #6a9f86; font-size: 8px; font-weight: 800; letter-spacing: .1em; }
 .reward-forward i { display: block; width: 90px; height: 5px; overflow: hidden; border-radius: 999px; background: rgba(86, 193, 165, .18); }
-.reward-forward i::after { display: block; width: 100%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #88d5a8, #7668cd, #b7dc77); content: ""; transform-origin: left; animation: reward-progress 2.8s cubic-bezier(.23, 1, .32, 1) both; }
+.reward-forward i::after { display: block; width: 100%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #88d5a8, #7668cd, #b7dc77); content: ""; transform-origin: left; animation: reward-progress 3.2s cubic-bezier(.45, 0, .55, 1) both; }
 .reward-sparkles { position: absolute; inset: 0; pointer-events: none; }
 .reward-sparkles i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #8a70d8; opacity: 0; animation: reward-spark 1.55s ease-out both; }
 .reward-sparkles i:nth-child(1) { top: 16px; right: 52px; background: #a978e4; animation-delay: .05s; }
@@ -646,7 +646,7 @@ a { color: inherit; }
 .reward-sparkles i:nth-child(7) { top: 18px; left: 42%; width: 4px; height: 4px; background: #bbdc72; animation-delay: .1s; }
 .reward-sparkles i:nth-child(8) { bottom: 13px; left: 64%; width: 4px; height: 4px; background: #62c6ad; animation-delay: .28s; }
 @keyframes reward-card-in { from { opacity: 0; transform: translate(var(--reward-x), -18px) scale(.98); } to { opacity: 1; transform: translate(var(--reward-x), 0) scale(1); } }
-@keyframes reward-sweep { 0% { opacity: 0; transform: skewX(-18deg) translateX(0); } 9% { opacity: 1; } 82% { opacity: .95; } 100% { opacity: 0; transform: skewX(-18deg) translateX(395%); } }
+@keyframes reward-sweep { 0% { opacity: 0; transform: skewX(-18deg) translateX(0); } 12% { opacity: 1; } 86% { opacity: .96; } 100% { opacity: 0; transform: skewX(-18deg) translateX(395%); } }
 @keyframes reward-progress { from { transform: scaleX(.08); } to { transform: scaleX(1); } }
 @keyframes reward-spark { 0% { opacity: 0; transform: scale(.4); } 24% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--spark-x, 10px), -18px) scale(1.8); } }
 @media (max-width: 620px) {

@@ -6,7 +6,7 @@ import { EXTERNAL_LINK_CHECK, LEGACY_COMPLIANCE_NOTES, RED_GEO_WARNINGS, SIGNAL_
 import { isSupabaseConfigured, supabase } from "./supabase";
 import IntelligenceView from "./IntelligenceView";
 import PremiumReportView from "./PremiumReportView";
-import { loadIntelligenceData } from "./data/intelligenceStore";
+import { loadIntelligenceData, saveIntelligenceProfile, saveResearchQuestion } from "./data/intelligenceStore";
 import { loadReportingData } from "./data/reportingStore";
 import {
   acceptTeamInvitation,
@@ -245,6 +245,7 @@ function App() {
   const [loginCooldownEndsAt, setLoginCooldownEndsAt] = useState(0);
   const [setupName, setSetupName] = useState("Tommy");
   const [workspaceName, setWorkspaceName] = useState("GEO Playbook");
+  const [buyerSetup, setBuyerSetup] = useState({ domain: "", targetMarket: "Deutschland", targetAudience: "", primaryGoal: "Mehr qualifizierte Anfragen", coreQuestion: "" });
   const [profileName, setProfileName] = useState("");
   const [contentForm, setContentForm] = useState({ briefing: "", draft: "", status: "idea" });
   const [inviteForm, setInviteForm] = useState({ email: "", displayName: "", role: "member" });
@@ -337,7 +338,9 @@ function App() {
       if (acceptedWorkspaceId) showToast("Du bist jetzt im GEO-Playbook-Team.");
     } catch (error) {
       if (error.message?.includes("noch kein Playbook-Arbeitsbereich")) {
-        setSetupName(currentSession.user.user_metadata?.display_name || "Tommy");
+        const buyerName = currentSession.user.user_metadata?.display_name || "";
+        setSetupName(buyerName || "Dein Name");
+        setWorkspaceName(buyerName ? `${buyerName}s GEO Playbook` : "Mein GEO Playbook");
         setScreen("onboarding");
       } else {
         setScreen("error");
@@ -416,9 +419,36 @@ function App() {
     setBusy(true);
     try {
       const workspaceId = await bootstrapWorkspace({ workspaceName, profileName: setupName });
+      const normalizedDomain = buyerSetup.domain.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
+      await Promise.all([
+        saveIntelligenceProfile({
+          workspaceId,
+          domain: normalizedDomain,
+          targetMarket: buyerSetup.targetMarket,
+          targetAudience: buyerSetup.targetAudience,
+          primaryGoal: buyerSetup.primaryGoal,
+          primaryConversion: buyerSetup.primaryGoal,
+          baselineNotes: "Käufer-Onboarding abgeschlossen. Technische GEO-Readiness ist der erste Reifegradschritt.",
+        }),
+        saveResearchQuestion({
+          workspaceId,
+          question: {
+            question: buyerSetup.coreQuestion,
+            topicId: "",
+            searchIntent: "informational",
+            businessWeight: "3",
+            visibilityGap: "50",
+            impactScore: "0",
+            effortScore: "3",
+            riskLevel: "green",
+            status: "backlog",
+            targetUrl: normalizedDomain ? `https://${normalizedDomain}` : "",
+          },
+        }),
+      ]);
       const workspaceData = { id: workspaceId, name: workspaceName, role: "admin" };
       await hydrateWorkspace(workspaceData, session.user.id);
-      showToast("Dein Playbook ist eingerichtet.");
+      showToast("Dein persönlicher GEO-Startplan ist bereit.");
     } catch (error) {
       showToast(errorMessage(error));
     } finally {
@@ -661,7 +691,7 @@ function App() {
   if (screen === "loading") return <StateScreen eyebrow="GEO PLAYBOOK" title="Dein Arbeitsbereich wird geladen." text="Einen Moment – wir rufen deinen Tagesplan und deinen Fortschritt ab." />;
   if (screen === "error") return <StateScreen eyebrow="VERBINDUNG PRÜFEN" title="Der Arbeitsbereich ist gerade nicht erreichbar." text="Bitte prüfe die zentrale Datenbank-Konfiguration und lade die Seite danach neu." />;
   if (screen === "login") return <AuthScreen email={loginEmail} setEmail={setLoginEmail} sent={loginSent} error={loginError} busy={busy} coolingDown={loginCooldownEndsAt > Date.now()} onSubmit={handleLogin} />;
-  if (screen === "onboarding") return <OnboardingScreen name={setupName} setName={setSetupName} workspaceName={workspaceName} setWorkspaceName={setWorkspaceName} busy={busy} onSubmit={handleBootstrap} />;
+  if (screen === "onboarding") return <OnboardingScreen name={setupName} setName={setSetupName} workspaceName={workspaceName} setWorkspaceName={setWorkspaceName} buyerSetup={buyerSetup} setBuyerSetup={setBuyerSetup} busy={busy} onSubmit={handleBootstrap} />;
 
   return (
     <div className="shell">
@@ -692,6 +722,7 @@ function App() {
             <p className="date-label">{todayLabel}</p>
           </div>
           <div className="topbar-actions">
+            <span className="pilot-status"><b>GEFÜHRTER GEO PILOT</b><small>Keine automatische Veröffentlichung</small></span>
             <button className="sound-toggle" type="button" aria-pressed={rewardSoundOn} onClick={toggleRewardSound}>Sound: {rewardSoundOn ? "an" : "aus"}</button>
             <div className="profile-control">
               <div className="avatar">{profile.display_name.slice(0, 1).toUpperCase()}</div>
@@ -729,9 +760,26 @@ function AuthScreen({ email, setEmail, sent, error, busy, coolingDown, onSubmit 
   );
 }
 
-function OnboardingScreen({ name, setName, workspaceName, setWorkspaceName, busy, onSubmit }) {
+function OnboardingScreen({ name, setName, workspaceName, setWorkspaceName, buyerSetup, setBuyerSetup, busy, onSubmit }) {
+  const [step, setStep] = useState(1);
+  const [notice, setNotice] = useState("");
+  const updateBuyerSetup = (key, value) => setBuyerSetup(current => ({ ...current, [key]: value }));
+  const canProceed = step === 1 ? name.trim() && workspaceName.trim() && buyerSetup.domain.trim() : step === 2 ? buyerSetup.targetAudience.trim() && buyerSetup.primaryGoal.trim() : buyerSetup.coreQuestion.trim();
+  const nextStep = () => {
+    if (!canProceed) {
+      setNotice("Bitte vervollständige diesen kurzen Schritt, damit dein Startplan persönlich wird.");
+      return;
+    }
+    setNotice("");
+    setStep(current => Math.min(3, current + 1));
+  };
+
   return (
-    <div className="state-shell"><div className="state-card auth-card"><div className="gradient-pill">STUFE 1 · TOMMY-ADMIN</div><h1>Dein Playbook ist bereit.</h1><p>Lege jetzt den ersten zentralen Arbeitsbereich an. Weitere Teammitglieder können später kontrolliert ergänzt werden.</p><form onSubmit={onSubmit} className="auth-form"><label htmlFor="admin-name">Dein Name</label><input id="admin-name" value={name} onChange={event => setName(event.target.value)} required /><label htmlFor="workspace-name">Name des Arbeitsbereichs</label><input id="workspace-name" value={workspaceName} onChange={event => setWorkspaceName(event.target.value)} required /><button className="primary-button" disabled={busy}>{busy ? "Wird eingerichtet …" : "Playbook als Admin starten"}</button></form></div></div>
+    <div className="state-shell"><div className="state-card onboarding-card"><div className="onboarding-pilot"><span>GEFÜHRTER GEO PILOT</span><b>Du behältst die Kontrolle</b></div><div className="gradient-pill">DEINE ERSTEN 20 MINUTEN</div><h1>Wir bauen deinen ersten klaren GEO-Startplan.</h1><p>Du startest nicht mit Plattformen oder Links. Erst definieren wir deine Website, dein Ziel und eine echte Nutzerfrage. Danach führt dich der Reifegradpfad weiter.</p><div className="onboarding-outcomes"><article><b>1</b><span>Technische Startbasis</span></article><article><b>2</b><span>Eine wichtige Nutzerfrage</span></article><article><b>3</b><span>Dein erster klarer Schritt</span></article></div><div className="onboarding-steps" aria-label="Onboarding-Fortschritt"><span className={step >= 1 ? "active" : ""}>1 · Website</span><span className={step >= 2 ? "active" : ""}>2 · Ziel</span><span className={step >= 3 ? "active" : ""}>3 · Frage</span></div><form onSubmit={onSubmit} className="auth-form onboarding-form">
+      {step === 1 && <><label htmlFor="admin-name">Wie dürfen wir dich ansprechen?</label><input id="admin-name" value={name} onChange={event => setName(event.target.value)} required /><label htmlFor="workspace-name">Name deines Arbeitsbereichs</label><input id="workspace-name" value={workspaceName} onChange={event => setWorkspaceName(event.target.value)} required /><label htmlFor="buyer-domain">Welche Website möchtest du entwickeln?</label><input id="buyer-domain" value={buyerSetup.domain} onChange={event => updateBuyerSetup("domain", event.target.value)} placeholder="deine-domain.de" required /></>}
+      {step === 2 && <><label htmlFor="buyer-market">Für welchen Markt arbeitest du?</label><input id="buyer-market" value={buyerSetup.targetMarket} onChange={event => updateBuyerSetup("targetMarket", event.target.value)} required /><label htmlFor="buyer-audience">Wem soll deine Website besonders helfen?</label><input id="buyer-audience" value={buyerSetup.targetAudience} onChange={event => updateBuyerSetup("targetAudience", event.target.value)} placeholder="z. B. Marketingteams im Mittelstand" required /><label htmlFor="buyer-goal">Was soll sichtbare Arbeit für dich auslösen?</label><input id="buyer-goal" value={buyerSetup.primaryGoal} onChange={event => updateBuyerSetup("primaryGoal", event.target.value)} placeholder="z. B. mehr qualifizierte Anfragen" required /></>}
+      {step === 3 && <><label htmlFor="buyer-question">Welche wichtige Frage soll deine Website besser beantworten?</label><textarea id="buyer-question" rows="4" value={buyerSetup.coreQuestion} onChange={event => updateBuyerSetup("coreQuestion", event.target.value)} placeholder="z. B. Wie erkenne ich, ob meine Website für KI-Suche bereit ist?" required /><div className="onboarding-trust"><b>Was das Produkt jetzt macht</b><span>Es erstellt deine persönliche GEO-Basis und führt dich durch den ersten Reifegrad. Es veröffentlicht nichts automatisch und verspricht keine Rankings.</span></div></>}
+      {notice && <p className="auth-error" role="alert">{notice}</p>}<div className="onboarding-actions">{step > 1 && <button className="quiet-button" type="button" onClick={() => { setNotice(""); setStep(current => current - 1); }}>Zurück</button>}{step < 3 ? <button className="primary-button" type="button" onClick={nextStep}>Weiter →</button> : <button className="primary-button" disabled={busy}>{busy ? "Startplan wird erstellt …" : "Meinen Startplan erstellen"}</button>}</div></form></div></div>
   );
 }
 
@@ -838,6 +886,7 @@ function AuthorityView({ pillars, stages, done, progress, onToggle, onOpenConten
     <section className="view-stack">
       <div className="intro-copy compact"><div className="gradient-pill">DEIN 4-WOCHEN-FAHRPLAN</div><h1>Schritt für Schritt zu einem belastbaren GEO-Reifegrad.</h1><p>Du arbeitest wie in einer Prüfung: erst messbar machen, dann Antworten stärken, Belege sichern und erst danach eine externe Gelegenheit kontrolliert bewerten.</p></div>
       <MaturityPath activeIndex={activeMaturityIndex} readinessDone={readinessDone} onOpenView={onOpenView} />
+      {readinessDone > 0 && <PilotUpgradePreview />}
       <WorkspaceMap />
       <details className="knowledge-library"><summary><span><b>Grundlagen-Bibliothek – nur bei Bedarf</b><small>Plattformen, Kapitel und Aufbauaufgaben. Kein zweiter Tagesplan.</small></span><em>Öffnen</em></summary><div className="knowledge-library-body">
         <div className="pillar-grid">{pillars.map(pillar => <article className="pillar-card" key={pillar.title}><span>{pillar.status}</span><h2>{pillar.title}</h2><p>{pillar.text}</p></article>)}</div>
@@ -861,6 +910,10 @@ function AuthorityView({ pillars, stages, done, progress, onToggle, onOpenConten
 
 function MaturityPath({ activeIndex, readinessDone, onOpenView }) {
   return <section className="maturity-path"><div className="maturity-path-head"><div><p className="eyebrow">DEIN REIFEGRAD</p><h2>Vier Wochen. Vier klare Prüfungen.</h2><p>Du brauchst nicht alles gleichzeitig zu können. Jede Woche baut auf dem vorherigen Ergebnis auf.</p></div><span>{activeIndex === 0 ? `${readinessDone}/6 Technikchecks` : "Nächste Stufe bereit"}</span></div><div className="maturity-step-list">{MATURITY_STEPS.map((step, index) => { const complete = index < activeIndex; const active = index === activeIndex; return <article className={`maturity-step ${active ? "active" : ""} ${complete ? "complete" : ""}`} key={step.week}><div className="maturity-step-number">{complete ? "✓" : index + 1}</div><div><p>{step.week} · {step.area}</p><h3>{step.title}</h3><span>{step.text}</span><small>{step.result}</small></div><button className={active ? "primary-button" : "quiet-button"} type="button" onClick={() => onOpenView(step.view)}>{active ? `Jetzt: ${step.action}` : step.action}</button></article>; })}</div></section>;
+}
+
+function PilotUpgradePreview() {
+  return <section className="pilot-upgrade-preview"><div><p className="eyebrow">NÄCHSTE MÖGLICHE AUSBAUSTUFE</p><h2>Du hast eine Basis geschaffen. Als Nächstes wird Wirkung messbar.</h2><p>Wenn du wissen möchtest, ob die Arbeit echte Sichtbarkeit, Besucher oder Anfragen auslöst, wird Search Console und GA4 im geführten Basic-Connect read-only angebunden.</p></div><div className="pilot-upgrade-options"><article><b>Jetzt im Pilot</b><span>Readiness, Fragen, Evidenz und manuelle Zitationsprüfung.</span></article><article><b>Später bei Bedarf</b><span>Echte Daten, Teamfreigaben, mehrere Themen und Premiumreporting.</span></article></div><small>Keine Freischaltung erfolgt automatisch. Der nächste Schritt wird erst bei echtem Bedarf gemeinsam geplant.</small></section>;
 }
 
 function WorkspaceMap() {

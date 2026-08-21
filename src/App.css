@@ -862,3 +862,47 @@ a { color: inherit; }
   .knowledge-library > summary { align-items: flex-start; padding: 17px; }
   .knowledge-library-body { padding: 16px; }
 }
+
+
+/* Käufer-Onboarding und geführter GEO Pilot */
+.onboarding-card { width: min(100%, 720px); }
+.onboarding-pilot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 17px; padding: 9px 11px; border: 1px solid #d9e8e2; border-radius: 11px; background: #f5fcf8; }
+.onboarding-pilot span, .pilot-status b { color: #3f806b; font-size: 10px; font-weight: 800; letter-spacing: .055em; }
+.onboarding-pilot b { color: #6b7580; font-size: 10px; }
+.onboarding-outcomes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 20px; }
+.onboarding-outcomes article { display: grid; grid-template-columns: 23px 1fr; align-items: center; gap: 7px; padding: 10px; border: 1px solid #e6e3ed; border-radius: 11px; background: #faf9fc; }
+.onboarding-outcomes b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; color: #fff; background: linear-gradient(135deg, #9a73dc, #58bfae); font-size: 10px; }
+.onboarding-outcomes span { color: #726c7d; font-size: 10px; font-weight: 700; line-height: 1.35; }
+.onboarding-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 22px; }
+.onboarding-steps span { padding: 7px 8px; border-radius: 8px; color: #a29daa; background: #f1eff4; font-size: 10px; font-weight: 800; text-align: center; }
+.onboarding-steps span.active { color: #5c5592; background: #ece9fa; }
+.onboarding-form { margin-top: 18px; }
+.onboarding-form textarea { width: 100%; resize: vertical; border: 1px solid #e1dde8; border-radius: 12px; outline: none; padding: 11px 12px; color: #403d4d; background: #fefeff; font: inherit; font-size: 12px; line-height: 1.5; }
+.onboarding-form textarea:focus { border-color: #9174dc; box-shadow: 0 0 0 4px rgba(145, 116, 220, .1); }
+.onboarding-trust { display: grid; gap: 4px; padding: 12px; border: 1px solid #dbece3; border-radius: 11px; color: #647870; background: #f5fcf8; font-size: 11px; line-height: 1.45; }
+.onboarding-trust b { color: #3e7663; font-size: 10px; }
+.onboarding-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 8px; }
+.pilot-status { display: grid; gap: 2px; padding: 6px 8px; border: 1px solid #d9e8e2; border-radius: 9px; background: #f5fcf8; text-align: left; }
+.pilot-status small { color: #718078; font-size: 9px; font-weight: 600; }
+.pilot-upgrade-preview { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(280px, .95fr); gap: 16px; padding: 21px 23px; border: 1px solid #ded8ef; border-radius: 19px; background: linear-gradient(135deg, #fdfbff, #f7fffb); }
+.pilot-upgrade-preview h2 { margin: 5px 0 7px; color: #443c5a; font-family: Manrope, sans-serif; font-size: 19px; letter-spacing: -.5px; }
+.pilot-upgrade-preview > div:first-child > p:last-child { max-width: 650px; margin: 0; color: #827b8d; font-size: 12px; line-height: 1.55; }
+.pilot-upgrade-options { display: grid; gap: 8px; }
+.pilot-upgrade-options article { display: grid; gap: 4px; padding: 11px 12px; border-radius: 11px; background: rgba(255, 255, 255, .82); }
+.pilot-upgrade-options article:first-child { border: 1px solid #d9e9e1; }
+.pilot-upgrade-options article:last-child { border: 1px dashed #c8b7e6; }
+.pilot-upgrade-options b { color: #5a548a; font-size: 11px; }
+.pilot-upgrade-options span { color: #807a89; font-size: 10px; line-height: 1.45; }
+.pilot-upgrade-preview > small { grid-column: 1 / -1; padding-top: 2px; color: #8d8599; font-size: 10px; line-height: 1.45; }
+
+@media (max-width: 760px) {
+  .onboarding-outcomes, .pilot-upgrade-preview { grid-template-columns: 1fr; }
+  .pilot-status { display: none; }
+}
+
+@media (max-width: 620px) {
+  .onboarding-outcomes { grid-template-columns: 1fr; }
+  .onboarding-steps { grid-template-columns: 1fr; }
+  .onboarding-actions { flex-direction: column-reverse; }
+  .onboarding-actions > * { width: 100%; }
+}

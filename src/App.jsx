@@ -670,7 +670,7 @@ function App() {
         {activeView === "reports" && <PremiumReportView workspace={workspace} intelligence={intelligenceData} reportData={reportingData} onRefresh={refreshWorkspace} onOpenIntelligence={() => setActiveView("intelligence")} />}
       </main>
 
-      {celebration && <div className="reward-celebration" role="status" aria-live="polite"><div className="reward-sparkles" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map(item => <i key={item} />)}</div><p>ABSCHLUSS GESPEICHERT</p><strong>{celebration.title}</strong><span>{celebration.detail}</span></div>}
+      {celebration && <div className="reward-celebration" role="status" aria-live="polite"><div className="reward-sparkles" aria-hidden="true">{[0, 1, 2, 3, 4, 5, 6, 7].map(item => <i key={item} />)}</div><div className="reward-seal" aria-hidden="true">✓</div><div className="reward-copy"><p>ABSCHLUSS GESPEICHERT</p><strong>{celebration.title}</strong><span>{celebration.detail}</span></div><div className="reward-forward" aria-hidden="true"><span>FORTSCHRITT</span><i /></div></div>}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   );

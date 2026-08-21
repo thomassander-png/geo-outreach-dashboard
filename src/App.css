@@ -624,29 +624,39 @@ a { color: inherit; }
 .topbar-actions { display: flex; align-items: center; gap: 14px; }
 .sound-toggle { min-height: 32px; padding: 0 10px; border: 1px solid #e2dfea; border-radius: 999px; color: #726d7f; background: #fff; font-size: 10px; font-weight: 700; transition: border-color .18s ease, color .18s ease, background .18s ease; }
 .sound-toggle[aria-pressed="true"] { border-color: #bfb4df; color: #6253a2; background: #f7f4ff; }
-.reward-celebration { position: fixed; z-index: 30; right: 24px; bottom: 82px; display: grid; min-width: min(330px, calc(100vw - 48px)); max-width: 360px; gap: 4px; overflow: hidden; padding: 17px 20px; border: 1px solid rgba(150, 124, 220, .3); border-radius: 18px; color: #454052; background: linear-gradient(125deg, rgba(255, 255, 255, .98), rgba(247, 244, 255, .98) 58%, rgba(241, 253, 248, .98)); box-shadow: 0 20px 48px rgba(75, 61, 109, .18); animation: reward-card-in .42s cubic-bezier(.2, .9, .25, 1.15) both; }
-.reward-celebration::after { position: absolute; right: -31px; bottom: -35px; width: 112px; height: 112px; border-radius: 50%; background: radial-gradient(circle, rgba(173, 222, 115, .44), rgba(81, 199, 176, .11) 58%, transparent 66%); content: ""; }
-.reward-celebration p { position: relative; z-index: 1; margin: 0; color: #7163af; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
-.reward-celebration strong { position: relative; z-index: 1; color: #383342; font-family: Manrope, sans-serif; font-size: 17px; letter-spacing: -.35px; }
-.reward-celebration span { position: relative; z-index: 1; color: #807b8a; font-size: 11px; line-height: 1.42; }
+.reward-celebration { --reward-x: -50%; position: fixed; z-index: 30; top: 94px; left: calc(50% + 125px); display: grid; grid-template-columns: 48px minmax(0, 1fr) 120px; align-items: center; width: min(780px, calc(100vw - 330px)); gap: 15px; overflow: hidden; padding: 15px 20px; border: 1px solid rgba(134, 106, 209, .38); border-radius: 18px; color: #454052; background: linear-gradient(106deg, rgba(255, 255, 255, .99), rgba(246, 242, 255, .98) 50%, rgba(238, 253, 247, .98)); box-shadow: 0 18px 52px rgba(75, 61, 109, .22), 0 0 0 5px rgba(168, 126, 233, .06); animation: reward-card-in .5s cubic-bezier(.23, 1, .32, 1) both; }
+.reward-celebration::after { position: absolute; right: -40px; bottom: -55px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(173, 222, 115, .52), rgba(81, 199, 176, .12) 58%, transparent 66%); content: ""; }
+.reward-seal { position: relative; z-index: 1; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, #8c69d5, #54c8ae); box-shadow: 0 10px 22px rgba(107, 83, 173, .28); font-family: Manrope, sans-serif; font-size: 28px; font-weight: 800; line-height: 1; }
+.reward-copy { position: relative; z-index: 1; display: grid; gap: 2px; min-width: 0; }
+.reward-copy p { margin: 0; color: #7163af; font-size: 9px; font-weight: 800; letter-spacing: .14em; }
+.reward-copy strong { overflow: hidden; color: #383342; font-family: Manrope, sans-serif; font-size: 17px; letter-spacing: -.35px; text-overflow: ellipsis; white-space: nowrap; }
+.reward-copy span { color: #807b8a; font-size: 11px; line-height: 1.42; }
+.reward-forward { position: relative; z-index: 1; display: grid; justify-items: end; gap: 5px; color: #6a9f86; font-size: 8px; font-weight: 800; letter-spacing: .1em; }
+.reward-forward i { display: block; width: 90px; height: 5px; overflow: hidden; border-radius: 999px; background: rgba(86, 193, 165, .18); }
+.reward-forward i::after { display: block; width: 100%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #88d5a8, #7668cd, #b7dc77); content: ""; transform-origin: left; animation: reward-progress 2.8s cubic-bezier(.23, 1, .32, 1) both; }
 .reward-sparkles { position: absolute; inset: 0; pointer-events: none; }
-.reward-sparkles i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #8a70d8; opacity: 0; animation: reward-spark 1.4s ease-out both; }
+.reward-sparkles i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #8a70d8; opacity: 0; animation: reward-spark 1.55s ease-out both; }
 .reward-sparkles i:nth-child(1) { top: 16px; right: 52px; background: #a978e4; animation-delay: .05s; }
 .reward-sparkles i:nth-child(2) { top: 31px; right: 23px; width: 4px; height: 4px; background: #62c6ad; animation-delay: .12s; }
 .reward-sparkles i:nth-child(3) { top: 49px; right: 74px; width: 5px; height: 5px; background: #b5da72; animation-delay: .2s; }
 .reward-sparkles i:nth-child(4) { top: 9px; left: 30px; width: 4px; height: 4px; background: #6fc6dc; animation-delay: .08s; }
 .reward-sparkles i:nth-child(5) { top: 60px; left: 18px; width: 3px; height: 3px; background: #9d77de; animation-delay: .18s; }
 .reward-sparkles i:nth-child(6) { bottom: 15px; right: 43px; width: 3px; height: 3px; background: #76cead; animation-delay: .25s; }
-@keyframes reward-card-in { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.reward-sparkles i:nth-child(7) { top: 18px; left: 42%; width: 4px; height: 4px; background: #bbdc72; animation-delay: .1s; }
+.reward-sparkles i:nth-child(8) { bottom: 13px; left: 64%; width: 4px; height: 4px; background: #62c6ad; animation-delay: .28s; }
+@keyframes reward-card-in { from { opacity: 0; transform: translate(var(--reward-x), -18px) scale(.98); } to { opacity: 1; transform: translate(var(--reward-x), 0) scale(1); } }
+@keyframes reward-progress { from { transform: scaleX(.08); } to { transform: scaleX(1); } }
 @keyframes reward-spark { 0% { opacity: 0; transform: scale(.4); } 24% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--spark-x, 10px), -18px) scale(1.8); } }
 @media (max-width: 620px) {
   .topbar-actions { gap: 8px; }
   .sound-toggle { padding: 0 8px; font-size: 9px; }
-  .reward-celebration { top: max(76px, calc(env(safe-area-inset-top) + 18px)); right: 16px; bottom: auto; left: 16px; min-width: 0; max-width: none; padding: 19px 18px; border-width: 2px; box-shadow: 0 18px 42px rgba(75, 61, 109, .22); }
-  .reward-celebration strong { font-size: 18px; }
-  .reward-celebration span { font-size: 12px; }
+  .reward-celebration { --reward-x: 0; top: max(76px, calc(env(safe-area-inset-top) + 18px)); right: 16px; bottom: auto; left: 16px; grid-template-columns: 42px minmax(0, 1fr); width: auto; min-width: 0; padding: 16px; border-width: 2px; box-shadow: 0 18px 42px rgba(75, 61, 109, .22); }
+  .reward-seal { width: 42px; height: 42px; border-radius: 14px; font-size: 24px; }
+  .reward-copy strong { font-size: 16px; }
+  .reward-copy span { font-size: 11px; }
+  .reward-forward { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .reward-celebration, .reward-sparkles i { animation: none; } .reward-sparkles { display: none; } }
+@media (prefers-reduced-motion: reduce) { .reward-celebration, .reward-sparkles i, .reward-forward i::after { animation: none; } .reward-sparkles { display: none; } }
 
 .auth-hint, .auth-error { margin: 18px 0 0; padding: 12px 13px; border-radius: 12px; font-size: 12px; line-height: 1.5; }
 .auth-hint { color: #635c73; border: 1px solid #e1dceb; background: #f8f6fc; }

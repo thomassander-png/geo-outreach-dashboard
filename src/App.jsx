@@ -32,13 +32,52 @@ import "./App.css";
 const CURRENT_ACTION_SCHEDULES = new Set(["Heute", "Morgen", "Diese Woche"]);
 const NAV_ITEMS = [
   { id: "today", label: "Heute", number: "1" },
-  { id: "playbook", label: "Playbook", number: "2" },
+  { id: "playbook", label: "Fahrplan", number: "2" },
   { id: "content", label: "Content", number: "3" },
   { id: "team", label: "Team", number: "4" },
   { id: "progress", label: "Fortschritt", number: "5" },
   { id: "intelligence", label: "Intelligenz", number: "6" },
   { id: "reports", label: "Reports", number: "7" },
 ];
+const MATURITY_STEPS = [
+  {
+    week: "Woche 1",
+    title: "Messbarkeit schaffen",
+    text: "Prüfe zuerst, ob deine Website technisch erreichbar ist und ob du Wirkung später sauber messen kannst.",
+    result: "Reifegrad: messbar",
+    area: "Intelligenz",
+    action: "Readiness öffnen",
+    view: "intelligence",
+  },
+  {
+    week: "Woche 2",
+    title: "Antworten stärken",
+    text: "Verbessere eine reale Nutzerfrage auf geo-tool.com mit einer klaren Antwort, einem Beispiel und einer Quelle.",
+    result: "Reifegrad: verständlich",
+    area: "Heute",
+    action: "Tagesmodus öffnen",
+    view: "today",
+  },
+  {
+    week: "Woche 3",
+    title: "Evidenz aufbauen",
+    text: "Halte einen echten Nachweis, eine Fallnotiz oder eine überprüfbare Erkenntnis fest und prüfe ihre Quelle.",
+    result: "Reifegrad: belegbar",
+    area: "Intelligenz",
+    action: "Evidenz öffnen",
+    view: "intelligence",
+  },
+  {
+    week: "Woche 4",
+    title: "Sichtbarkeit kontrolliert prüfen",
+    text: "Bewerte eine einzige echte Gelegenheit. Erst wenn Anlass, Regeln, Mehrwert und Transparenz passen, darf eine Beteiligung vorbereitet werden.",
+    result: "Reifegrad: verantwortungsvoll sichtbar",
+    area: "Heute",
+    action: "Community-Fenster öffnen",
+    view: "today",
+  },
+];
+
 const CONTENT_STATUSES = [
   { id: "idea", label: "Idee" },
   { id: "draft", label: "Entwurf" },
@@ -649,7 +688,7 @@ function App() {
       <main className="main-content" id="top">
         <header className="topbar">
           <div>
-            <p className="eyebrow">GEO PLAYBOOK · 10ER-TAGESPLAN</p>
+            <p className="eyebrow">GEO PLAYBOOK · DEIN REIFEGRADPFAD</p>
             <p className="date-label">{todayLabel}</p>
           </div>
           <div className="topbar-actions">
@@ -662,7 +701,7 @@ function App() {
         </header>
 
         {activeView === "today" && <TodayView nextAction={nextDailyAction} todayQueue={todayQueue} todayDoneCount={todayDoneCount} todaySkippedCount={todaySkippedCount} totalCount={todayQueue.length} onUpdate={handleDailyAction} busyId={dailyBusyId} onShowCalendar={() => setActiveView("progress")} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
-        {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} stages={PLAYBOOK_STAGES} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={taskId => openContent(taskId, "playbook")} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} />}
+        {activeView === "playbook" && <AuthorityView pillars={AUTHORITY_PILLARS} stages={PLAYBOOK_STAGES} done={done} progress={progress} onToggle={handleTaskToggle} onOpenContent={taskId => openContent(taskId, "playbook")} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} intelligence={intelligenceData} onOpenView={setActiveView} />}
         {activeView === "content" && selectedTask && <ContentView task={selectedTask} form={contentForm} setForm={setContentForm} busy={busy} onSave={saveContent} onBack={() => setActiveView(contentReturnView)} members={members} progress={progress[selectedTask.id]} canAssign={workspace.role === "admin"} onAssign={handleAssignTask} approvals={approvals} userId={session.user.id} canRequestApproval={!LEGACY_COMPLIANCE_NOTES[selectedTask.id]} onSubmitApproval={handleSubmitApproval} onCompleteApproval={handleCompleteApproval} />}
         {activeView === "team" && <TeamView workspace={workspace} profile={profile} members={members} approvals={approvals} inviteForm={inviteForm} setInviteForm={setInviteForm} busy={busy} onInvite={handleInvite} onDecision={handleApprovalDecision} onOpenContent={taskId => openContent(taskId, "team")} />}
         {activeView === "progress" && <><CalendarView dailyActions={dailyActions} todayKey={todayKey} selectedDate={calendarAnchor} onSelectDate={setCalendarAnchor} onPreviousWeek={() => setCalendarAnchor(current => toLocalDate(addDays(dateFromIso(current), -7)))} onNextWeek={() => setCalendarAnchor(current => toLocalDate(addDays(dateFromIso(current), 7)))} onGoToday={() => { setCalendarAnchor(todayKey); setActiveView("today"); }} /><ProgressView activity={activity} profileName={profileName} setProfileName={setProfileName} busy={busy} onSaveName={saveName} onSignOut={handleSignOut} todayDoneCount={todayDoneCount} totalCount={todayQueue.length} setupDoneCount={setupDoneCount} setupTotal={actionableTasks.length} /></>}
@@ -791,26 +830,41 @@ function WeeklyReview() {
   return <details className="knowledge-card weekly-review"><summary>10-Minuten-Wochenreview <span>Mehr anzeigen</span></summary><p>Nutze den Kalender und die echten Ergebnisse. Triff nur diese drei Entscheidungen:</p><div>{WEEKLY_REVIEW.map(([title, text]) => <article key={title}><b>{title}</b><span>{text}</span></article>)}</div></details>;
 }
 
-function AuthorityView({ pillars, stages, done, progress, onToggle, onOpenContent, setupDoneCount, setupTotal }) {
+function AuthorityView({ pillars, stages, done, progress, onToggle, onOpenContent, setupDoneCount, setupTotal, intelligence, onOpenView }) {
+  const readinessDone = intelligence?.technicalReadiness?.filter(item => item.status === "checked").length || 0;
+  const activeMaturityIndex = readinessDone < 6 ? 0 : 1;
+
   return (
     <section className="view-stack">
-      <div className="intro-copy compact"><div className="gradient-pill">DEIN GEO-PLAYBOOK</div><h1>Grundlagen, Plattformen und klare Outreach-Schritte.</h1><p>Hier liegt das Fundament: echte Fachlichkeit, nachvollziehbare Belege und passende Beteiligung – nicht bloß viele Links.</p></div>
-      <div className="pillar-grid">{pillars.map(pillar => <article className="pillar-card" key={pillar.title}><span>{pillar.status}</span><h2>{pillar.title}</h2><p>{pillar.text}</p></article>)}</div>
-      <KnowledgePath stages={stages} />
-      <SignalCatalog />
-      <article className="setup-summary"><div><p className="eyebrow">AUFBAU-PLAYBOOK</p><h2>{setupDoneCount} von {setupTotal} Grundlagen erledigt</h2><p>Die ursprünglichen Aufbauaufgaben bleiben vollständig erhalten und werden separat vom Tagesbetrieb geführt.</p></div><div className="progress-track"><div style={{ width: `${Math.round((setupDoneCount / setupTotal) * 100)}%` }} /></div></article>
-      <div className="playbook-grid">{PLATFORMS.map(platform => {
-        const actionablePlatformTasks = platform.tasks.filter(task => !LEGACY_COMPLIANCE_NOTES[task.id]);
-        const platformDone = actionablePlatformTasks.filter(task => done[task.id]).length;
-        const platformPercentage = actionablePlatformTasks.length ? Math.round((platformDone / actionablePlatformTasks.length) * 100) : 0;
-        const isRedPlatform = actionablePlatformTasks.length === 0;
-        return <article className={`platform-module ${isRedPlatform ? "red-platform" : ""}`} key={platform.id}><div className="module-head"><div><p className="eyebrow">{platform.tierLabel}</p><h2>{platform.name}</h2></div><span>{isRedPlatform ? "Red GEO" : `${platformPercentage}%`}</span></div><div className="mini-track"><div style={{ width: `${platformPercentage}%` }} /></div><div className="module-tasks">{platform.tasks.map(task => {
-          const complianceNote = LEGACY_COMPLIANCE_NOTES[task.id];
-          return <div className={`task-block ${complianceNote ? "legacy-risk" : ""}`} key={task.id}><div className={`task-item ${done[task.id] ? "done" : ""}`}><button className="task-check" aria-label={complianceNote ? `${task.text} nicht ausführen` : `${task.text} ${done[task.id] ? "wieder öffnen" : "erledigen"}`} onClick={() => onToggle(task.id)} disabled={Boolean(complianceNote)}>{done[task.id] ? "✓" : ""}</button><button className="task-copy" onClick={() => onOpenContent(task.id)} disabled={Boolean(complianceNote)}><span>{task.text}</span><small>{task.when}{progress[task.id]?.completed_at ? ` · ${formatDate(progress[task.id].completed_at)}` : ""}</small></button></div>{complianceNote && <p className="legacy-compliance-note"><b>Red GEO · nicht ausführen</b>{complianceNote}</p>}</div>;
-        })}</div>{!isRedPlatform && <ExternalLinkCheck platform={platform.name} />}<a href={platform.url} target="_blank" rel="noreferrer" className="module-link">Plattform öffnen <span>↗</span></a></article>;
-      })}</div>
+      <div className="intro-copy compact"><div className="gradient-pill">DEIN 4-WOCHEN-FAHRPLAN</div><h1>Schritt für Schritt zu einem belastbaren GEO-Reifegrad.</h1><p>Du arbeitest wie in einer Prüfung: erst messbar machen, dann Antworten stärken, Belege sichern und erst danach eine externe Gelegenheit kontrolliert bewerten.</p></div>
+      <MaturityPath activeIndex={activeMaturityIndex} readinessDone={readinessDone} onOpenView={onOpenView} />
+      <WorkspaceMap />
+      <details className="knowledge-library"><summary><span><b>Grundlagen-Bibliothek – nur bei Bedarf</b><small>Plattformen, Kapitel und Aufbauaufgaben. Kein zweiter Tagesplan.</small></span><em>Öffnen</em></summary><div className="knowledge-library-body">
+        <div className="pillar-grid">{pillars.map(pillar => <article className="pillar-card" key={pillar.title}><span>{pillar.status}</span><h2>{pillar.title}</h2><p>{pillar.text}</p></article>)}</div>
+        <KnowledgePath stages={stages} />
+        <SignalCatalog />
+        <article className="setup-summary"><div><p className="eyebrow">BIBLIOTHEKSFORTSCHRITT</p><h2>{setupDoneCount} von {setupTotal} Grundlagen dokumentiert</h2><p>Das sind mögliche Bausteine, keine tägliche Pflicht. Öffne nur einen Baustein, wenn dein aktueller Fahrplanschritt genau diese Lücke zeigt.</p></div><div className="progress-track"><div style={{ width: `${Math.round((setupDoneCount / setupTotal) * 100)}%` }} /></div></article>
+        <div className="playbook-grid">{PLATFORMS.map(platform => {
+          const actionablePlatformTasks = platform.tasks.filter(task => !LEGACY_COMPLIANCE_NOTES[task.id]);
+          const platformDone = actionablePlatformTasks.filter(task => done[task.id]).length;
+          const platformPercentage = actionablePlatformTasks.length ? Math.round((platformDone / actionablePlatformTasks.length) * 100) : 0;
+          const isRedPlatform = actionablePlatformTasks.length === 0;
+          return <article className={`platform-module ${isRedPlatform ? "red-platform" : ""}`} key={platform.id}><div className="module-head"><div><p className="eyebrow">{platform.tierLabel}</p><h2>{platform.name}</h2></div><span>{isRedPlatform ? "Red GEO" : `${platformPercentage}%`}</span></div><div className="mini-track"><div style={{ width: `${platformPercentage}%` }} /></div><div className="module-tasks">{platform.tasks.map(task => {
+            const complianceNote = LEGACY_COMPLIANCE_NOTES[task.id];
+            return <div className={`task-block ${complianceNote ? "legacy-risk" : ""}`} key={task.id}><div className={`task-item ${done[task.id] ? "done" : ""}`}><button className="task-check" aria-label={complianceNote ? `${task.text} nicht ausführen` : `${task.text} ${done[task.id] ? "wieder öffnen" : "erledigen"}`} onClick={() => onToggle(task.id)} disabled={Boolean(complianceNote)}>{done[task.id] ? "✓" : ""}</button><button className="task-copy" onClick={() => onOpenContent(task.id)} disabled={Boolean(complianceNote)}><span>{task.text}</span><small>{task.when}{progress[task.id]?.completed_at ? ` · ${formatDate(progress[task.id].completed_at)}` : ""}</small></button></div>{complianceNote && <p className="legacy-compliance-note"><b>Red GEO · nicht ausführen</b>{complianceNote}</p>}</div>;
+          })}</div>{!isRedPlatform && <ExternalLinkCheck platform={platform.name} />}<a href={platform.url} target="_blank" rel="noreferrer" className="module-link">Plattform öffnen <span>↗</span></a></article>;
+        })}</div>
+      </div></details>
     </section>
   );
+}
+
+function MaturityPath({ activeIndex, readinessDone, onOpenView }) {
+  return <section className="maturity-path"><div className="maturity-path-head"><div><p className="eyebrow">DEIN REIFEGRAD</p><h2>Vier Wochen. Vier klare Prüfungen.</h2><p>Du brauchst nicht alles gleichzeitig zu können. Jede Woche baut auf dem vorherigen Ergebnis auf.</p></div><span>{activeIndex === 0 ? `${readinessDone}/6 Technikchecks` : "Nächste Stufe bereit"}</span></div><div className="maturity-step-list">{MATURITY_STEPS.map((step, index) => { const complete = index < activeIndex; const active = index === activeIndex; return <article className={`maturity-step ${active ? "active" : ""} ${complete ? "complete" : ""}`} key={step.week}><div className="maturity-step-number">{complete ? "✓" : index + 1}</div><div><p>{step.week} · {step.area}</p><h3>{step.title}</h3><span>{step.text}</span><small>{step.result}</small></div><button className={active ? "primary-button" : "quiet-button"} type="button" onClick={() => onOpenView(step.view)}>{active ? `Jetzt: ${step.action}` : step.action}</button></article>; })}</div></section>;
+}
+
+function WorkspaceMap() {
+  return <section className="workspace-map"><div><p className="eyebrow">WO FINDE ICH WAS?</p><h2>Ein Bereich pro Arbeitsschritt.</h2><p>So bleibt der Ablauf klar, auch wenn das Playbook später von neuen Teams oder Kunden genutzt wird.</p></div><div className="workspace-map-grid"><article><b>1 · Heute</b><span>Deine eine aktuelle Aufgabe: Quelle stärken, lernen oder bei Anlass prüfen.</span></article><article><b>2 · Fahrplan</b><span>Der Reifegradpfad und die passende Wissensbibliothek für die aktuelle Woche.</span></article><article><b>3 · Intelligenz</b><span>Technik, Quellen, Evidenz und verifizierte KI-Zitationen prüfen.</span></article><article><b>4 · Content & Team</b><span>Entwürfe, Rollen und Freigaben nur dann nutzen, wenn eine echte externe Maßnahme vorbereitet wird.</span></article></div></section>;
 }
 
 function SignalCatalog() {

@@ -831,7 +831,7 @@ function WeeklyReview() {
 }
 
 function AuthorityView({ pillars, stages, done, progress, onToggle, onOpenContent, setupDoneCount, setupTotal, intelligence, onOpenView }) {
-  const readinessDone = intelligence?.technicalReadiness?.filter(item => item.status === "checked").length || 0;
+  const readinessDone = intelligence?.readinessChecks?.filter(item => item.status === "passed").length || 0;
   const activeMaturityIndex = readinessDone < 6 ? 0 : 1;
 
   return (

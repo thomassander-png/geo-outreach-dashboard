@@ -30,6 +30,50 @@ import {
 import "./App.css";
 
 const CURRENT_ACTION_SCHEDULES = new Set(["Heute", "Morgen", "Diese Woche"]);
+const ONBOARDING_DRAFT_PREFIX = "geo-playbook-onboarding-draft";
+
+function createBuyerSetup() {
+  return {
+    domain: "",
+    targetMarket: "Deutschland",
+    targetAudience: "",
+    primaryGoal: "Mehr qualifizierte Anfragen",
+    coreQuestion: "",
+  };
+}
+
+function onboardingDraftKey(userId) {
+  return `${ONBOARDING_DRAFT_PREFIX}:${userId}`;
+}
+
+function loadOnboardingDraft(userId) {
+  try {
+    const raw = window.sessionStorage.getItem(onboardingDraftKey(userId));
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    if (!draft || typeof draft !== "object") return null;
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+function saveOnboardingDraft(userId, draft) {
+  try {
+    window.sessionStorage.setItem(onboardingDraftKey(userId), JSON.stringify(draft));
+  } catch {
+    // Der Käufer kann auch ohne Browser-Entwurf weiterarbeiten.
+  }
+}
+
+function clearOnboardingDraft(userId) {
+  try {
+    window.sessionStorage.removeItem(onboardingDraftKey(userId));
+  } catch {
+    // Ein nicht löschbarer Entwurf darf den erfolgreichen Startplan nicht blockieren.
+  }
+}
+
 const NAV_ITEMS = [
   { id: "today", label: "Heute", number: "1" },
   { id: "playbook", label: "Fahrplan", number: "2" },
@@ -245,7 +289,8 @@ function App() {
   const [loginCooldownEndsAt, setLoginCooldownEndsAt] = useState(0);
   const [setupName, setSetupName] = useState("Tommy");
   const [workspaceName, setWorkspaceName] = useState("GEO Playbook");
-  const [buyerSetup, setBuyerSetup] = useState({ domain: "", targetMarket: "Deutschland", targetAudience: "", primaryGoal: "Mehr qualifizierte Anfragen", coreQuestion: "" });
+  const [buyerSetup, setBuyerSetup] = useState(createBuyerSetup);
+  const [onboardingStep, setOnboardingStep] = useState(1);
   const [profileName, setProfileName] = useState("");
   const [contentForm, setContentForm] = useState({ briefing: "", draft: "", status: "idea" });
   const [inviteForm, setInviteForm] = useState({ email: "", displayName: "", role: "member" });
@@ -339,8 +384,11 @@ function App() {
     } catch (error) {
       if (error.message?.includes("noch kein Playbook-Arbeitsbereich")) {
         const buyerName = currentSession.user.user_metadata?.display_name || "";
-        setSetupName(buyerName || "Dein Name");
-        setWorkspaceName(buyerName ? `${buyerName}s GEO Playbook` : "Mein GEO Playbook");
+        const draft = loadOnboardingDraft(currentSession.user.id);
+        setSetupName(draft?.setupName || buyerName || "Dein Name");
+        setWorkspaceName(draft?.workspaceName || (buyerName ? `${buyerName}s GEO Playbook` : "Mein GEO Playbook"));
+        setBuyerSetup({ ...createBuyerSetup(), ...(draft?.buyerSetup || {}) });
+        setOnboardingStep(Math.min(3, Math.max(1, Number(draft?.step) || 1)));
         setScreen("onboarding");
       } else {
         setScreen("error");
@@ -375,6 +423,16 @@ function App() {
   // Die Auth-Subscription wird bewusst nur einmal beim Start registriert.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (screen !== "onboarding" || !session?.user?.id) return;
+    saveOnboardingDraft(session.user.id, {
+      setupName,
+      workspaceName,
+      buyerSetup,
+      step: onboardingStep,
+    });
+  }, [screen, session?.user?.id, setupName, workspaceName, buyerSetup, onboardingStep]);
 
   useEffect(() => {
     if (!loginCooldownEndsAt) return undefined;
@@ -448,6 +506,7 @@ function App() {
       ]);
       const workspaceData = { id: workspaceId, name: workspaceName, role: "admin" };
       await hydrateWorkspace(workspaceData, session.user.id);
+      clearOnboardingDraft(session.user.id);
       showToast("Dein persönlicher GEO-Startplan ist bereit.");
     } catch (error) {
       showToast(errorMessage(error));
@@ -691,7 +750,7 @@ function App() {
   if (screen === "loading") return <StateScreen eyebrow="GEO PLAYBOOK" title="Dein Arbeitsbereich wird geladen." text="Einen Moment – wir rufen deinen Tagesplan und deinen Fortschritt ab." />;
   if (screen === "error") return <StateScreen eyebrow="VERBINDUNG PRÜFEN" title="Der Arbeitsbereich ist gerade nicht erreichbar." text="Bitte prüfe die zentrale Datenbank-Konfiguration und lade die Seite danach neu." />;
   if (screen === "login") return <AuthScreen email={loginEmail} setEmail={setLoginEmail} sent={loginSent} error={loginError} busy={busy} coolingDown={loginCooldownEndsAt > Date.now()} onSubmit={handleLogin} />;
-  if (screen === "onboarding") return <OnboardingScreen name={setupName} setName={setSetupName} workspaceName={workspaceName} setWorkspaceName={setWorkspaceName} buyerSetup={buyerSetup} setBuyerSetup={setBuyerSetup} busy={busy} onSubmit={handleBootstrap} />;
+  if (screen === "onboarding") return <OnboardingScreen name={setupName} setName={setSetupName} workspaceName={workspaceName} setWorkspaceName={setWorkspaceName} buyerSetup={buyerSetup} setBuyerSetup={setBuyerSetup} step={onboardingStep} setStep={setOnboardingStep} busy={busy} onSubmit={handleBootstrap} />;
 
   return (
     <div className="shell">
@@ -760,8 +819,7 @@ function AuthScreen({ email, setEmail, sent, error, busy, coolingDown, onSubmit 
   );
 }
 
-function OnboardingScreen({ name, setName, workspaceName, setWorkspaceName, buyerSetup, setBuyerSetup, busy, onSubmit }) {
-  const [step, setStep] = useState(1);
+function OnboardingScreen({ name, setName, workspaceName, setWorkspaceName, buyerSetup, setBuyerSetup, step, setStep, busy, onSubmit }) {
   const [notice, setNotice] = useState("");
   const updateBuyerSetup = (key, value) => setBuyerSetup(current => ({ ...current, [key]: value }));
   const canProceed = step === 1 ? name.trim() && workspaceName.trim() && buyerSetup.domain.trim() : step === 2 ? buyerSetup.targetAudience.trim() && buyerSetup.primaryGoal.trim() : buyerSetup.coreQuestion.trim();
